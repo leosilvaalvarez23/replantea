@@ -182,13 +182,24 @@ def test_vpn_early_payment():
 # ---------------------------------------------------------------------------
 # Caso Excel: -6.925.145,36
 # ---------------------------------------------------------------------------
-# TODO: completar con los datos de Plantilla_Liquidacion_Interes_Clientes.xlsx.
-# Pedir a Leonardo: plan_pagos y pagos del caso que produce exactamente -6.925.145,36.
-# El test debe llamar liquidacion(pactado, pagos, tasa_cia, tasa_cliente) y verificar
-# que result.ajuste == pytest.approx(-6_925_145.36, abs=0.01).
-@pytest.mark.skip(reason="Pendiente: datos del Excel (Plantilla_Liquidacion_Interes_Clientes.xlsx)")
+# Datos de Plantilla_Liquidacion_Interes_Clientes.xlsx — proyecto Vida Park.
+# Comprador paga todo por adelantado: descuento total = -6.925.145,36 COP.
+# Tasas: tasa_cia=0.6 % M.V., tasa_cliente=1 % M.V.
 def test_caso_excel():
-    pactado = []   # reemplazar con datos reales
-    pagos = []     # reemplazar con datos reales
-    result = liquidacion(pactado, pagos, tasa_cia=0.006, tasa_cliente=0.024)
+    pactado = [
+        {"fecha": "2025-04-30", "valor": 5_050_000},
+        {"fecha": "2025-05-31", "valor": 1_000_000},
+        {"fecha": "2025-06-30", "valor": 1_000_000},
+        {"fecha": "2025-07-31", "valor": 187_648_000},
+        {"fecha": "2027-07-30", "valor": 482_500_000},
+    ]
+    pagos = [
+        {"fecha": "2025-04-30", "valor": 5_050_000},
+        {"fecha": "2025-05-07", "valor": 1_000_000},
+        {"fecha": "2025-06-25", "valor": 1_000_000},
+        {"fecha": "2025-07-31", "valor": 187_648_000},
+        {"fecha": "2026-09-04", "valor": 106_111_000},
+        {"fecha": "2027-07-30", "valor": 369_463_854.64391685},
+    ]
+    result = liquidacion(pactado, pagos, tasa_cia=0.006, tasa_cliente=0.01)
     assert result.ajuste == pytest.approx(-6_925_145.36, abs=0.01)
