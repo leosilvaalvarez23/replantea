@@ -56,17 +56,33 @@ App web para que los compradores de proyectos de vivienda **modifiquen su plan d
 
 ## 3. Arquitectura decidida
 
-- Backend **FastAPI (Python)** + **PostgreSQL** propio + frontend a partir del prototipo.
+- Backend **Django 5 + Django Ninja** (endpoints JSON) + **PostgreSQL** propio + frontend a partir del prototipo.
+- **Por qué Django Ninja y no FastAPI o DRF:**
+  - Django Admin integrado = portal de proyectos (tasas, topes) y gestión de usuarios/roles sin construir UI adicional.
+  - Django ya lo usa Ágora → mismo stack, misma experiencia operativa.
+  - Django Ninja da la misma ergonomía de FastAPI (Pydantic, type hints, OpenAPI) dentro del ecosistema Django.
 - Docker Compose en `/opt/replantea` del servidor existente.
 - Correo: Brevo (producción). En pruebas el OTP se muestra en pantalla.
-- Motor de cálculo de referencia: `engine.js` (portar a Python con los mismos tests).
+- Motor de cálculo: módulo Python independiente (`engine/`) con sus 14 pruebas. No depende de Django.
+- **Estructura del backend (`backend/`):**
+  - `replantea/` — configuración Django (settings, urls, wsgi)
+  - `usuarios/` — app: modelo Usuario (AbstractUser + rol fijo), admin configurado
+  - `proyectos/` — app: ProyectoConfig (tasas, topes, método, activo), admin = portal de proyectos
+  - `solicitudes/` — app: Solicitud + link de comprador + firma electrónica
+  - `imx_client.py` — proxy al API de IngeMAX (token solo en servidor)
+  - `api.py` — endpoints Django Ninja: `/api/imx/`, `/api/evaluar/`, `/api/comprador/<token>/`
+- **Roles fijos** (sin UI de gestión; se ajustan por Django Admin si se requiere):
+  - `administrador` — acceso total
+  - `gerente` — aprueba solicitudes que superan el umbral
+  - `asesor` — crea solicitudes, genera links para compradores
+- **Link del comprador:** reutilizable (no de un solo uso), se cierra cuando el plan queda firmado o vence el plazo.
 
 ## 4a. Servidor de PRUEBAS de Replantea (dedicado)
 
 - Hetzner **CX23** `replantea-test`, Nuremberg, Ubuntu 26.04, 2 vCPU, 4 GB RAM, 40 GB. IP **2.31.84.237**.
 - Firewall Hetzner `replantea-fw`: entrada TCP 22/80/443 + ICMP; salida libre. (También aplicado al servidor de Ágora.)
-- Llaves SSH: `mi-pc` y `Comercial2`.
-- Stack: **Caddy** (HTTPS automático) + FastAPI + PostgreSQL en Docker Compose, todo en `/opt/replantea`.
+- Llaves SSH: `mi-pc` y `Comercial2`. Llave operativa desde este PC: `~/.ssh/id_replantea` (sin passphrase).
+- Stack: **Caddy** (HTTPS automático) + Django/Gunicorn + PostgreSQL en Docker Compose, todo en `/opt/replantea`.
 - URL de pruebas: **https://replantea.2-31-84-237.sslip.io**
 - Decisión: validar aquí; al final decidir si producción queda en servidor propio para VyP o integrada al de Ágora.
 
@@ -90,16 +106,26 @@ App web para que los compradores de proyectos de vivienda **modifiquen su plan d
   - SSH endurecido: `/etc/ssh/sshd_config.d/00-seguridad.conf` (sin contraseña, root solo con llave). Verificar que el acceso con llave funciona antes de cerrar sesiones.
 - Pendientes de seguridad: instalar **fail2ban**; revisar **Firewall de Hetzner** (solo 22/80/443); activar **Backups de Hetzner**; autenticación básica en Nginx para el ambiente de pruebas.
 
-## 5. Pendientes
+## 5. Hecho / Pendientes
 
-- [ ] Crear repositorio GitHub privado `replantea` y subir este contexto.
-- [ ] Portar `engine.js` a Python con tests (caso Excel: −6.925.145,36; ajuste 0 cuando la propuesta = plan vigente).
-- [ ] Backend: usuarios/roles, portal de proyectos, sincronización API, solicitudes, firma, PDF, correos, bandeja de aprobación, verificación post-carga.
-- [ ] Regla de excedente → crédito.
-- [ ] Desplegar en el servidor con sslip.io.
-- [ ] Con VyP: tasas por proyecto, días de gracia, conceptos exactos, usuarios (asesores/aprobadores), logo, textos legales, proyecto piloto.
-- [ ] Con GERPRO: ¿endpoint para modificar pagos pactados? ¿exponer tasa del proyecto?
-- [ ] Rotar el token de IngeMAX.
+### Completado (2026-10-20)
+- [x] Repositorio GitHub privado `replantea` → `github.com/leosilvaalvarez23/replantea`
+- [x] Motor `engine/engine.py` portado de JS a Python — 14 tests pasan (incl. caso Excel −6.925.145,36)
+- [x] Servidor pruebas listo: Docker, swap 2 GB, fail2ban, SSH solo llave
+- [x] MVP FastAPI desplegado en `https://replantea.2-31-84-237.sslip.io` (se reemplaza con Django)
+
+### Próximos pasos
+- [ ] Migrar backend a Django 5 + Django Ninja (reemplaza el MVP FastAPI)
+- [ ] App `proyectos`: modelo ProyectoConfig + admin (portal de proyectos con tasas)
+- [ ] App `usuarios`: modelo Usuario + roles fijos + admin
+- [ ] App `solicitudes`: modelo Solicitud + link comprador (reutilizable, cierra al firmar o vencer)
+- [ ] Endpoints Ninja: proxy IngeMAX, evaluar, comprador/token, auth JWT
+- [ ] Rediseño frontend con estilo SICO (azul-petróleo, cards limpias)
+- [ ] Firma electrónica: OTP correo, PDF, SHA-256, log auditoría
+- [ ] Regla de excedente → crédito
+- [ ] Con VyP: tasas por proyecto, días de gracia, conceptos exactos, usuarios, logo, textos legales
+- [ ] Con GERPRO: ¿endpoint modificar pagos pactados? ¿exponer tasa del proyecto?
+- [ ] Rotar token IngeMAX antes de producción
 
 ## 6. Comercial (propuesta preliminar)
 - Implementación: COP 18–25 M. Suscripción: COP 1,2–1,8 M/mes por empresa (hasta 5 proyectos) o COP 350–500 mil por proyecto activo/mes.
