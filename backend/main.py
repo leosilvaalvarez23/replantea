@@ -94,6 +94,15 @@ def get_proyectos():
     ]
 
 
+def _extract_negocios(data) -> list:
+    if isinstance(data, list):
+        return data
+    for key in ("negs", "negocios", "results", "data"):
+        if key in data and isinstance(data[key], list):
+            return data[key]
+    return []
+
+
 @app.get("/api/negocios")
 async def get_negocios(proyecto_id: int = 1):
     headers = _imx_headers()
@@ -104,13 +113,12 @@ async def get_negocios(proyecto_id: int = 1):
         )
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=f"IngeMAX: {r.text[:200]}")
-    return r.json()
+    return _extract_negocios(r.json())
 
 
 @app.get("/api/negocio/{id_venta}")
 async def get_negocio(id_venta: int, proyecto_id: int = 1):
-    data = await get_negocios(proyecto_id)
-    negocios = data if isinstance(data, list) else data.get("negocios", data.get("results", []))
+    negocios = await get_negocios(proyecto_id)
     for n in negocios:
         if n.get("id_venta") == id_venta or n.get("id") == id_venta:
             return n
