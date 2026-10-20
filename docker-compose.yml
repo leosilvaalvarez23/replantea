@@ -4,6 +4,9 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG:-0}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-replantea.2-31-84-237.sslip.io}
       - IMX_TOKEN=${IMX_TOKEN}
       - DATABASE_URL=postgresql://replantea:${DB_PASSWORD}@db:5432/replantea
     depends_on:
