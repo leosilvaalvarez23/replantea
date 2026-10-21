@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Configuración — Replantea</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#f0f2f1;--surf:#fff;--surf2:#f5f7f6;--ink:#11201b;--ink2:#4a5650;--muted:#7c8882;--line:#dae1dd;
+  --acc:#0e5c54;--acc2:#e6f0ee;--acc-ink:#fff;
+  --good:#1a7a3c;--good-bg:#e4f3e9;--bad:#b0312a;--bad-bg:#f7e6e4;--warn:#92600a;--warn-bg:#f7efda;
+  --fd:"Bricolage Grotesque",system-ui,sans-serif;
+  --fb:"Public Sans",system-ui,sans-serif;
+  --fn:"JetBrains Mono",monospace;
+  --r:10px;--hdr:54px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0d1512;--surf:#141f1c;--surf2:#192421;--ink:#e4ece8;--ink2:#b0bdb8;--muted:#889390;--line:#283330;
+  --acc:#5abcb0;--acc2:#1a3230;--acc-ink:#06201d;
+  --good:#66cb88;--good-bg:#17311f;--bad:#f0857a;--bad-bg:#381b18;--warn:#e6b255;--warn-bg:#33270f;
+  color-scheme:dark}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:14px;line-height:1.5}
+h1,h2{font-family:var(--fd);letter-spacing:-.01em}
+h1{font-size:20px}h2{font-size:15px}
+.muted{color:var(--muted)}.small{font-size:12px}[hidden]{display:none!important}
+
+header{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:14px;position:sticky;top:0;z-index:10}
+.brand{font-family:var(--fd);font-size:19px;font-weight:700;color:var(--ink);text-decoration:none}
+.brand sup{font-size:10px;font-family:var(--fb);font-weight:600;color:var(--muted);margin-left:3px}
+.back{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:5px 10px}
+.back:hover{color:var(--ink);border-color:var(--ink2)}
+.proto-bar{background:var(--warn-bg);color:var(--warn);font-size:11.5px;padding:5px 20px;text-align:center}
+
+.page{max-width:820px;margin:0 auto;padding:24px 20px;display:flex;flex-direction:column;gap:24px}
+
+/* proyecto tabs */
+.proj-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.proj-tab{all:unset;cursor:pointer;padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;color:var(--ink2);border:1px solid var(--line);background:var(--surf)}
+.proj-tab:hover{border-color:var(--acc);color:var(--acc)}
+.proj-tab.active{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+
+/* form card */
+.card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:16px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-hd h2{display:flex;align-items:center;gap:8px}
+.badge-metodo{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--acc2);color:var(--acc)}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
+@media(max-width:540px){.form-grid{grid-template-columns:1fr}}
+.form-row{display:flex;flex-direction:column;gap:4px}
+.form-row.span2{grid-column:1/-1}
+label{font-size:12px;font-weight:600;color:var(--ink2)}
+label span{font-weight:400;color:var(--muted)}
+input[type=text],input[type=number],select{
+  width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:6px;
+  font-size:13px;font-family:var(--fb);color:var(--ink);background:var(--surf2);
+  outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--acc)}
+.hint{font-size:11px;color:var(--muted)}
+.metodo-switch{display:flex;gap:0}
+.metodo-switch button{
+  all:unset;cursor:pointer;padding:6px 14px;font-size:13px;font-weight:600;
+  border:1px solid var(--line);color:var(--ink2);background:var(--surf2)}
+.metodo-switch button:first-child{border-radius:6px 0 0 6px}
+.metodo-switch button:last-child{border-radius:0 6px 6px 0;border-left:none}
+.metodo-switch button.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.metodo-switch button:not(.on):hover{background:var(--acc2);color:var(--acc)}
+
+/* actions */
+.actions{display:flex;align-items:center;gap:10px}
+.btn{all:unset;cursor:pointer;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--acc);color:var(--acc-ink)}
+.btn-primary:hover{opacity:.9}
+.btn-secondary{border:1px solid var(--line);color:var(--ink2);background:var(--surf)}
+.btn-secondary:hover{border-color:var(--acc);color:var(--acc)}
+.save-msg{font-size:12px;font-weight:600}
+.save-msg.ok{color:var(--good)}
+.save-msg.err{color:var(--bad)}
+
+/* toggle activo */
+.toggle-row{display:flex;align-items:center;gap:10px;padding:10px 0}
+.toggle{position:relative;display:inline-block;width:38px;height:22px;flex:none}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:var(--line);border-radius:11px;transition:.2s}
+.slider:before{content:"";position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.slider{background:var(--acc)}
+.toggle input:checked+.slider:before{transform:translateX(16px)}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="/">Replantea<sup>β</sup></a>
+  <a class="back" href="/">← Volver</a>
+</header>
+<div class="proto-bar">Panel de configuración — solo gerente / administrador</div>
+
+<main class="page">
+  <div>
+    <h1>Configuración de proyectos</h1>
+    <p class="muted small" style="margin-top:4px">Parámetros financieros que aplican al motor de cálculo de cada proyecto.</p>
+  </div>
+
+  <div class="proj-tabs" id="projTabs"></div>
+
+  <div id="projForm" hidden>
+    <div class="card">
+      <div class="card-hd">
+        <h2 id="formTitle">—</h2>
+        <span class="badge-metodo" id="metodoBadge"></span>
+      </div>
+
+      <div class="form-grid">
+
+        <!-- Método -->
+        <div class="form-row span2">
+          <label>Método de cálculo</label>
+          <div class="metodo-switch">
+            <button id="btnLiq" onclick="setMetodo('liquidacion')">Liquidación de saldo</button>
+            <button id="btnVpn" onclick="setMetodo('vpn')">VPN</button>
+          </div>
+          <span class="hint">Liquidación de saldo = interés simple DAYS360. VPN = valor presente neto con tasa compuesta.</span>
+        </div>
+
+        <!-- Tasas -->
+        <div class="form-row">
+          <label>Tasa compañía <span>(% mensual)</span></label>
+          <input type="number" id="fTasaCia" step="0.001" min="0" max="5">
+          <span class="hint">Para adelantos (saldo negativo). Ej: 0.6 = 0,6 % MV</span>
+        </div>
+        <div class="form-row">
+          <label>Tasa cliente <span>(% mensual)</span></label>
+          <input type="number" id="fTasaCliente" step="0.001" min="0" max="5">
+          <span class="hint">Para atrasos (saldo positivo). Ej: 2.4 = 2,4 % MV</span>
+        </div>
+        <div class="form-row">
+          <label>Tasa VPN <span>(% mensual)</span></label>
+          <input type="number" id="fTasaVpn" step="0.001" min="0" max="5">
+          <span class="hint">Solo aplica si el método es VPN</span>
+        </div>
+
+        <!-- Topes -->
+        <div class="form-row">
+          <label>Tope descuento <span>(% del valor de venta)</span></label>
+          <input type="number" id="fTope" step="0.1" min="0" max="20">
+          <span class="hint">Máximo descuento que el motor puede otorgar</span>
+        </div>
+        <div class="form-row">
+          <label>Umbral aprobación <span>(% del valor de venta)</span></label>
+          <input type="number" id="fUmbral" step="0.1" min="0" max="20">
+          <span class="hint">Descuento mayor a este requiere aprobación de gerencia</span>
+        </div>
+        <div class="form-row">
+          <label>Cuota mínima <span>(COP)</span></label>
+          <input type="number" id="fCuotaMin" step="100000" min="0">
+          <span class="hint">Ninguna cuota de la propuesta puede ser menor a este valor (salvo abonos)</span>
+        </div>
+
+        <!-- Conceptos -->
+        <div class="form-row span2">
+          <label>Concepto del ajuste</label>
+          <input type="text" id="fConcepto" maxlength="100" placeholder="Descuento financiero plan de pagos">
+          <span class="hint">Etiqueta que aparece en la línea de ajuste dentro de IngeMAX</span>
+        </div>
+        <div class="form-row span2">
+          <label>Concepto de abono</label>
+          <input type="text" id="fConceptoAbono" maxlength="100" placeholder="Recursos Propios">
+          <span class="hint">Concepto que IngeMAX usa para los pagos directos del comprador</span>
+        </div>
+
+      </div><!-- /form-grid -->
+
+      <div class="toggle-row">
+        <label class="toggle">
+          <input type="checkbox" id="fActivo">
+          <span class="slider"></span>
+        </label>
+        <div>
+          <div style="font-weight:600;font-size:13px">Proyecto activo</div>
+          <div class="hint">Solo los proyectos activos aparecen en la lista de negocios</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" onclick="guardar()">Guardar cambios</button>
+        <button class="btn btn-secondary" onclick="descartar()">Descartar</button>
+        <span class="save-msg" id="saveMsg"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="emptyState" style="color:var(--muted);font-size:13px">
+    Selecciona un proyecto para editar su configuración.
+  </div>
+</main>
+
+<script>
+const API = '/api';
+let proyectos = [];
+let selId = null;
+let orig = {};
+
+const pct = v => +(v * 100).toFixed(4);
+const frac = v => +(v / 100);
+
+async function init() {
+  const r = await fetch(`${API}/proyectos?todos=true`);
+  proyectos = await r.json();
+  renderTabs();
+  if (proyectos.length) selectProyecto(proyectos[0].id);
+}
+
+function renderTabs() {
+  const el = document.getElementById('projTabs');
+  el.innerHTML = proyectos.map(p =>
+    `<button class="proj-tab${selId===p.id?' active':''}" onclick="selectProyecto(${p.id})">${escHtml(p.nombre)}</button>`
+  ).join('');
+}
+
+function selectProyecto(id) {
+  selId = id;
+  renderTabs();
+  const p = proyectos.find(x => x.id === id);
+  if (!p) return;
+  orig = {...p};
+  fillForm(p);
+  document.getElementById('projForm').hidden = false;
+  document.getElementById('emptyState').hidden = true;
+  clearMsg();
+}
+
+function fillForm(p) {
+  document.getElementById('formTitle').textContent = p.nombre;
+  setMetodo(p.metodo, false);
+  document.getElementById('fTasaCia').value = pct(p.tasa_cia);
+  document.getElementById('fTasaCliente').value = pct(p.tasa_cliente);
+  document.getElementById('fTasaVpn').value = pct(p.tasa_vpn);
+  document.getElementById('fTope').value = pct(p.tope_pct);
+  document.getElementById('fUmbral').value = pct(p.umbral_pct);
+  document.getElementById('fCuotaMin').value = p.cuota_min;
+  document.getElementById('fConcepto').value = p.concepto;
+  document.getElementById('fConceptoAbono').value = p.concepto_abono;
+  document.getElementById('fActivo').checked = p.activo;
+}
+
+function setMetodo(m, updateBadge=true) {
+  document.getElementById('btnLiq').classList.toggle('on', m==='liquidacion');
+  document.getElementById('btnVpn').classList.toggle('on', m==='vpn');
+  if (updateBadge) {
+    document.getElementById('metodoBadge').textContent = m==='liquidacion' ? 'Liquidación' : 'VPN';
+  } else {
+    document.getElementById('metodoBadge').textContent = m==='liquidacion' ? 'Liquidación' : 'VPN';
+  }
+  document.getElementById('fTasaVpn').closest('.form-row').style.opacity = m==='vpn' ? '1' : '.45';
+  window._metodo = m;
+}
+
+function readForm() {
+  return {
+    metodo: window._metodo || orig.metodo,
+    tasa_cia: frac(parseFloat(document.getElementById('fTasaCia').value)),
+    tasa_cliente: frac(parseFloat(document.getElementById('fTasaCliente').value)),
+    tasa_vpn: frac(parseFloat(document.getElementById('fTasaVpn').value)),
+    tope_pct: frac(parseFloat(document.getElementById('fTope').value)),
+    umbral_pct: frac(parseFloat(document.getElementById('fUmbral').value)),
+    cuota_min: parseInt(document.getElementById('fCuotaMin').value, 10),
+    concepto: document.getElementById('fConcepto').value.trim(),
+    concepto_abono: document.getElementById('fConceptoAbono').value.trim(),
+    activo: document.getElementById('fActivo').checked,
+  };
+}
+
+async function guardar() {
+  clearMsg();
+  const data = readForm();
+  try {
+    const r = await fetch(`${API}/proyectos/${selId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(()=>({detail:'Error desconocido'}));
+      showMsg(err.detail || 'Error al guardar', 'err');
+      return;
+    }
+    // update local copy
+    const idx = proyectos.findIndex(x=>x.id===selId);
+    if (idx>=0) proyectos[idx] = {...proyectos[idx], ...data};
+    orig = {...proyectos[idx]};
+    showMsg('Guardado correctamente', 'ok');
+  } catch(e) {
+    showMsg('Error de red: ' + e.message, 'err');
+  }
+}
+
+function descartar() {
+  fillForm(orig);
+  clearMsg();
+}
+
+function showMsg(txt, cls) {
+  const el = document.getElementById('saveMsg');
+  el.textContent = txt;
+  el.className = 'save-msg ' + cls;
+  if (cls==='ok') setTimeout(clearMsg, 3000);
+}
+function clearMsg() {
+  const el = document.getElementById('saveMsg');
+  el.textContent = '';
+  el.className = 'save-msg';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+init();
+</script>
+</body>
+</html>

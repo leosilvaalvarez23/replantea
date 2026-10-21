@@ -36,14 +36,15 @@ def health(request):
 
 
 @api.get("/proyectos")
-def get_proyectos(request):
+def get_proyectos(request, todos: bool = False):
     from proyectos.models import ProyectoConfig
+    qs = ProyectoConfig.objects.all() if todos else ProyectoConfig.objects.filter(activo=True)
     return list(
-        ProyectoConfig.objects.filter(activo=True).values(
+        qs.values(
             "id", "id_imx", "nombre", "metodo",
             "tasa_cia", "tasa_cliente", "tasa_vpn",
             "tope_pct", "umbral_pct", "cuota_min",
-            "concepto", "concepto_abono",
+            "concepto", "concepto_abono", "activo",
         )
     )
 
@@ -70,6 +71,33 @@ async def get_negocio(request, id_venta: int, proyecto_id: int = 1):
         if n.get("id_venta") == id_venta or n.get("id") == id_venta:
             return n
     raise HttpError(404, f"Negocio {id_venta} no encontrado en proyecto {proyecto_id}")
+
+
+class ProyectoUpdateSchema(Schema):
+    metodo: str = None
+    tasa_cia: float = None
+    tasa_cliente: float = None
+    tasa_vpn: float = None
+    tope_pct: float = None
+    umbral_pct: float = None
+    cuota_min: int = None
+    concepto: str = None
+    concepto_abono: str = None
+    activo: bool = None
+
+
+@api.patch("/proyectos/{proyecto_id}")
+def update_proyecto(request, proyecto_id: int, data: ProyectoUpdateSchema):
+    from proyectos.models import ProyectoConfig
+    try:
+        p = ProyectoConfig.objects.get(id=proyecto_id)
+    except ProyectoConfig.DoesNotExist:
+        raise HttpError(404, "Proyecto no encontrado")
+    fields = data.dict(exclude_unset=True)
+    for k, v in fields.items():
+        setattr(p, k, v)
+    p.save()
+    return {"ok": True}
 
 
 @api.post("/evaluar")

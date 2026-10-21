@@ -9,8 +9,13 @@ def prototipo(request):
     return FileResponse(open("/app/prototipo/replantea.html", "rb"), content_type="text/html")
 
 
+def config_view(request):
+    return FileResponse(open("/app/prototipo/config.html", "rb"), content_type="text/html")
+
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
+    path("config/", config_view),
     path("", prototipo),
 ]
