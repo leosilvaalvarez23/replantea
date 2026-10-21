@@ -1,4 +1,4 @@
-<title>Replantea Plan de Pagos</title>
+﻿<title>Replantea Plan de Pagos</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -415,13 +415,14 @@ $('#corteTxt').textContent = fLarga(CORTE);
 let uid = 1; const nid = () => 'r' + (uid++);
 
 // ================= datos de ejemplo (forma del API IngeMAX) =================
-const PROYECTOS = [
-  { id: 1, nombre_proyecto: 'Pruebas · IngeMAX VyP', real: true, cfg: { metodo: 'liquidacion', tasaCia: 0.006, tasaCliente: 0.024, tasaVpn: 0.01, topePct: 0.03, umbralPct: 0.015, cuotaMin: 1000000, concepto: 'Descuento financiero plan de pagos', conceptoAbono: 'Recursos Propios' } },
-  { id: 7, nombre_proyecto: 'Vida Park', cfg: { metodo: 'liquidacion', tasaCia: 0.006, tasaCliente: 0.01, tasaVpn: 0.008, topePct: 0.03, umbralPct: 0.015, cuotaMin: 1000000, concepto: 'Descuento financiero plan de pagos', conceptoAbono: 'Abono extraordinario' } },
-  { id: 15, nombre_proyecto: 'Mirador del Valle', cfg: { metodo: 'vpn', tasaCia: 0.006, tasaCliente: 0.01, tasaVpn: 0.008, topePct: 0.025, umbralPct: 0.01, cuotaMin: 1500000, concepto: 'Ajuste financiero plan de pagos', conceptoAbono: 'Abono extraordinario' } }
+// Proyectos de demo (sin id_imx → sin llamadas al API de IngeMAX)
+const DEMO_PROYECTOS = [
+  { id: 7, nombre_proyecto: 'Vida Park (demo)', cfg: { metodo: 'liquidacion', tasaCia: 0.006, tasaCliente: 0.01, tasaVpn: 0.008, topePct: 0.03, umbralPct: 0.015, cuotaMin: 1000000, concepto: 'Descuento financiero plan de pagos', conceptoAbono: 'Abono extraordinario' } },
+  { id: 15, nombre_proyecto: 'Mirador del Valle (demo)', cfg: { metodo: 'vpn', tasaCia: 0.006, tasaCliente: 0.01, tasaVpn: 0.008, topePct: 0.025, umbralPct: 0.01, cuotaMin: 1500000, concepto: 'Ajuste financiero plan de pagos', conceptoAbono: 'Abono extraordinario' } }
 ];
+let PROYECTOS = [];
 function cuotas(n, desde, dia, valor, concepto = 'Cuota inicial') { return Array.from({ length: n }, (_, i) => ({ fecha_pp: addM(desde + i, dia), concepto, valor })); }
-const NEGOCIOS = [
+let NEGOCIOS = [
   { id_venta: 2501, proyecto_id: 7, inmueble: 'T1 - AP-123', seccion: 'TORRE 1', cliente_negocio: 'FREDY BERNARDO RÍOS SALAZAR', cliente_identificacion: '79456123', correo: 'fredy.rios@correo.co', valor_venta: 677198000, valor_credito: 0, estado_negocio: 'Vendido', fecha_escrituracion_programada: addM(9, 30), area: 123,
     plan_pagos: [{ fecha_pp: addM(-18, 30), concepto: 'Separacion', valor: 5050000 }, { fecha_pp: addM(-17, 31), concepto: 'Cuota inicial', valor: 1000000 }, { fecha_pp: addM(-16, 30), concepto: 'Cuota inicial', valor: 1000000 }, { fecha_pp: addM(-15, 31), concepto: 'Cuota inicial', valor: 187648000 }, { fecha_pp: addM(9, 30), concepto: 'Saldo cuota inicial', valor: 482500000 }],
     recaudo: [{ fecha: addM(-18, 30), concepto: 'Separacion', valor: 5050000 }, { fecha: addM(-17, 7), concepto: 'Recursos Propios', valor: 1000000 }, { fecha: addM(-16, 25), concepto: 'Recursos Propios', valor: 1000000 }, { fecha: addM(-15, 31), concepto: 'Recursos Propios', valor: 187648000 }] },
@@ -432,15 +433,24 @@ const NEGOCIOS = [
     plan_pagos: [{ fecha_pp: addM(-6, 15), concepto: 'Separacion', valor: 5000000 }, ...cuotas(16, -5, 15, 6700000)],
     recaudo: [{ fecha: addM(-6, 15), concepto: 'Separacion', valor: 5000000 }, ...cuotas(5, -5, 14, 6700000, 'Recursos Propios').map(c => ({ fecha: c.fecha_pp, concepto: c.concepto, valor: c.valor }))] }
 ];
-const NEGOCIOS_REALES = [{"proyecto_id": 1, "valor_venta": 487500000, "estado_negocio": "Separado", "fecha_escrituracion_programada": "1900-01-01", "fecha_credito": "", "real": true, "id_venta": 1974, "inmueble": "T1 - 602", "seccion": "TORRE 1", "cliente_negocio": "COMPRADOR PRUEBA A", "cliente_identificacion": "•••• 1974", "correo": "comprador.a@ejemplo.co", "valor_credito": 341250000, "fecha_venta": "2026-07-24", "plan_pagos": [{"fecha_pp": "2025-11-28", "concepto": "Recursos Propios", "valor": 1500000, "int_mora": 287787, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2025-12-28", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 1209871, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-01-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 1007233, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-02-28", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 840354, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-03-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 655595, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-04-30", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 476797, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-05-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 397542, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-06-30", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 268198, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-07-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 83439, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-08-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 200325, "int_desc": 1396, "int_aplicado": 174642}, {"fecha_pp": "2026-09-30", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 53640, "int_desc": 0, "int_aplicado": 13840}, {"fecha_pp": "2026-10-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-11-30", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2026-12-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2027-01-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2027-02-28", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2027-03-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2027-04-30", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2027-05-31", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2027-06-30", "concepto": "Recursos Propios", "valor": 7238000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2027-07-31", "concepto": "Recursos Propios", "valor": 7228000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}], "recaudo": [{"fecha": "2026-07-24", "valor": 40000000, "concepto": "Recursos Propios"}, {"fecha": "2026-08-19", "valor": 20404000, "concepto": "Recursos Propios"}]}, {"proyecto_id": 1, "valor_venta": 512500000, "estado_negocio": "Vendido", "fecha_escrituracion_programada": "1900-01-01", "fecha_credito": "", "real": true, "id_venta": 16, "inmueble": "T1 - 802", "seccion": "TORRE 1", "cliente_negocio": "COMPRADOR PRUEBA B", "cliente_identificacion": "•••• 0016", "correo": "comprador.b@ejemplo.co", "valor_credito": 410000000, "fecha_venta": "2019-12-23", "plan_pagos": [{"fecha_pp": "2019-12-21", "concepto": "Recursos Propios", "valor": 1500000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-01-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 0, "int_desc": 30960, "int_aplicado": 0}, {"fecha_pp": "2020-02-14", "concepto": "Recursos Propios", "valor": 20000000, "int_mora": 12293749, "int_desc": 64613, "int_aplicado": 0}, {"fecha_pp": "2020-02-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 13467337, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-03-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 13306151, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-04-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 13133849, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-05-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 12967105, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-06-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 12794804, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-07-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 12628060, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-08-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 12455758, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-09-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 12283456, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-10-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 12116712, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-11-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 11944410, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-12-20", "concepto": "Recursos Propios", "valor": 6750000, "int_mora": 11777667, "int_desc": 0, "int_aplicado": 0}], "recaudo": [{"fecha": "2019-12-23", "valor": 15000000, "concepto": "Recursos Propios"}, {"fecha": "2021-08-03", "valor": 10000000, "concepto": "Recursos Propios"}]}, {"proyecto_id": 1, "valor_venta": 487500000, "estado_negocio": "Separado", "fecha_escrituracion_programada": "1900-01-01", "fecha_credito": "", "real": true, "id_venta": 13, "inmueble": "T1 - 801", "seccion": "TORRE 1", "cliente_negocio": "COMPRADOR PRUEBA C", "cliente_identificacion": "•••• 0013", "correo": "comprador.c@ejemplo.co", "valor_credito": 341250000, "fecha_venta": "2019-12-15", "plan_pagos": [{"fecha_pp": "2019-12-15", "concepto": "Recursos Propios", "valor": 1500000, "int_mora": 0, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-01-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 13434577, "int_desc": 23332, "int_aplicado": 0}, {"fecha_pp": "2020-02-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 22261962, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-03-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 21996065, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-04-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 21711831, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-05-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 21436766, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-06-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 21152531, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-07-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 20877466, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-08-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 20593232, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-09-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 20308997, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-10-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 20033932, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-11-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 19749698, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2020-12-15", "concepto": "Recursos Propios", "valor": 11135000, "int_mora": 19474632, "int_desc": 0, "int_aplicado": 0}, {"fecha_pp": "2021-01-15", "concepto": "Recursos Propios", "valor": 11130000, "int_mora": 19181781, "int_desc": 0, "int_aplicado": 0}], "recaudo": [{"fecha": "2019-12-15", "valor": 6000000, "concepto": "Recursos Propios"}]}];
-NEGOCIOS.push(...NEGOCIOS_REALES);
+async function cargarNegocios(proyectoId) {
+  const p = proyecto(proyectoId);
+  if (!p || !p.id_imx) return;
+  try {
+    const r = await fetch(`/api/negocios?proyecto_id=${p.id_imx}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    NEGOCIOS = NEGOCIOS.filter(n => n.proyecto_id !== proyectoId);
+    NEGOCIOS.push(...data.map(n => ({ ...n, proyecto_id: proyectoId })));
+  } catch(e) { console.warn('No se pudieron cargar negocios:', e); }
+}
 const conceptosDe = pid => { const c = cfgOf(pid); return [...new Set([...NEGOCIOS.filter(n => n.proyecto_id === pid).flatMap(n => n.plan_pagos.map(p => p.concepto)), c.conceptoAbono, 'Cesantias'])]; };
 const conceptoPrincipal = pid => { const m = {}; NEGOCIOS.filter(n => n.proyecto_id === pid).flatMap(n => n.plan_pagos).forEach(p => m[p.concepto] = (m[p.concepto] || 0) + 1); return Object.entries(m).sort((a, b) => b[1] - a[1])[0][0]; };
 const fechaValida = f => f && f > '1900-01-01' ? f : null;
 const isCredito = c => /cr[eé]dito/i.test(c);
 
 // ================= estado =================
-const S = { proyectoId: 1, negId: 1974, q: '', solicitudes: [], solActiva: null, view: 'asesor' };
+const S = { proyectoId: null, negId: null, q: '', solicitudes: [], solActiva: null, view: 'asesor' };
 try { const s = JSON.parse(localStorage.getItem('replantea.sol.v2') || 'null'); if (Array.isArray(s)) S.solicitudes = s; } catch (e) {}
 function persist() { try { localStorage.setItem('replantea.sol.v2', JSON.stringify(S.solicitudes)); } catch (e) {} }
 const proyecto = id => PROYECTOS.find(p => p.id === id);
@@ -473,6 +483,7 @@ function analizar(n) {
 
 // ================= vista ASESOR =================
 function renderAsesor() {
+  if (!PROYECTOS.length) { $('#listaNeg').innerHTML = '<div class="empty">Conectando con el servidor…</div>'; return; }
   const sel = $('#selProyecto');
   sel.innerHTML = PROYECTOS.map(p => `<option value="${p.id}" ${p.id === S.proyectoId ? 'selected' : ''}>${esc(p.nombre_proyecto)}</option>`).join('');
   const q = S.q.trim().toLowerCase();
@@ -534,7 +545,7 @@ function crearSolicitud(n) {
   const prop = a.pend.map(p => ({ id: nid(), fecha: p.vencida ? CORTE : p.fecha, concepto: p.concepto, valor: p.valor, orig: p.valor, origFecha: p.fecha }));
   const sol = { id, token, negId: n.id_venta, proyectoId: n.proyecto_id, creada: new Date().toISOString(), estado: 'Enviado al comprador', propuesta: prop, cfg: { ...proyecto(n.proyecto_id).cfg } };
   S.solicitudes.unshift(sol); S.solActiva = id; persist();
-  const url = `https://replantea.app/p/${token}`;
+  const url = `${location.origin}/comprador/${token}`;
   if (!$('#linkOut')) return sol;
   $('#linkOut').innerHTML = `<div class="linkbox"><code>${url}</code><button class="btn sm" id="cpLink">Copiar</button><button class="btn sm pri" id="goCli">Abrir como comprador</button></div><div class="small muted">Link de un solo uso, vence en 7 días. Se envía por correo y WhatsApp a ${esc(n.correo)}.</div>`;
   $('#cpLink').onclick = () => copiar(url, 'Link copiado');
@@ -762,23 +773,58 @@ function renderAprob() {
 function go(v) { S.view = v; document.querySelectorAll('nav.steps button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v)); document.querySelectorAll('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + v)); render(); window.scrollTo(0, 0); }
 function render() { if (S.view === 'asesor') renderAsesor(); if (S.view === 'cliente') renderCliente(); if (S.view === 'aprob') renderAprob(); }
 document.querySelectorAll('nav.steps button').forEach(b => b.onclick = () => go(b.dataset.v));
-$('#selProyecto').onchange = e => { S.proyectoId = Number(e.target.value); S.negId = null; renderAsesor(); };
+$('#selProyecto').onchange = async e => { S.proyectoId = Number(e.target.value); S.negId = null; await cargarNegocios(S.proyectoId); renderAsesor(); };
 $('#q').oninput = e => { S.q = e.target.value; renderAsesor(); };
 $('#listaNeg').onclick = e => { const b = e.target.closest('button[data-id]'); if (!b) return; S.negId = Number(b.dataset.id); renderAsesor(); };
 $('#listaSol').onclick = e => { const b = e.target.closest('button[data-id]'); if (!b) return; S.solActiva = b.dataset.id; renderAprob(); };
 document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { proyecto(S.proyectoId).cfg.metodo = b.dataset.m; renderCfg(); });
 [['#cTasaCia', 'tasaCia', parsePct], ['#cTasaCli', 'tasaCliente', parsePct], ['#cTasaVpn', 'tasaVpn', parsePct], ['#cTope', 'topePct', parsePct], ['#cUmbral', 'umbralPct', parsePct], ['#cMin', 'cuotaMin', parseNum], ['#cConcepto', 'concepto', v => v]].forEach(([sel, k, fn]) => $(sel).addEventListener('change', e => { proyecto(S.proyectoId).cfg[k] = fn(e.target.value); renderCfg(); toast('Política del proyecto actualizada'); }));
 
-// Solicitud de ejemplo precargada para que la vista del comprador abra con datos
-if (!S.solicitudes.length) {
-  const n = negocio(2501); crearSolicitud(n);
-  const s = S.solicitudes[0]; const last = s.propuesta.find(p => p.concepto === 'Saldo cuota inicial');
-  last.valor -= 106111000; s.propuesta.push({ id: nid(), fecha: addM(1, 4), concepto: 'Abono extraordinario', valor: 106111000, abono: true });
-  const r = crearSolicitud(negocio(1974));
-  const fut = r.propuesta.filter(p => p.fecha > addM(3, 1)).sort((x, y) => y.fecha.localeCompare(x.fecha));
-  let quita = 0; fut.slice(0, 4).forEach(p => { quita += p.valor; p.valor = 0; });
-  r.propuesta = r.propuesta.filter(p => p.valor > 0); r.propuesta.push({ id: nid(), fecha: addM(1, 30), concepto: 'Cesantias', valor: quita, abono: true });
-  persist();
-} else { S.solActiva = S.solicitudes[0].id; }
-renderAsesor();
+// Carga proyectos del API y luego negocios del proyecto activo
+async function init() {
+  renderAsesor(); // muestra estado vacío mientras carga
+  try {
+    const r = await fetch('/api/proyectos');
+    if (r.ok) {
+      const data = await r.json();
+      const apiProyectos = data.map(p => ({
+        id: p.id, id_imx: p.id_imx, nombre_proyecto: p.nombre,
+        cfg: { metodo: p.metodo, tasaCia: p.tasa_cia, tasaCliente: p.tasa_cliente,
+               tasaVpn: p.tasa_vpn ?? 0.01, topePct: p.tope_pct, umbralPct: p.umbral_pct,
+               cuotaMin: p.cuota_min, concepto: p.concepto ?? 'Descuento financiero plan de pagos',
+               conceptoAbono: p.concepto_abono ?? 'Recursos Propios' }
+      }));
+      PROYECTOS = [...apiProyectos, ...DEMO_PROYECTOS];
+      if (apiProyectos.length) {
+        S.proyectoId = apiProyectos[0].id;
+        await cargarNegocios(S.proyectoId);
+      }
+    }
+  } catch (e) {
+    console.warn('API no disponible, usando datos demo', e);
+    PROYECTOS = [...DEMO_PROYECTOS];
+    S.proyectoId = DEMO_PROYECTOS[0].id;
+  }
+
+  // Solicitudes de ejemplo precargadas en primer uso
+  if (!S.solicitudes.length) {
+    const n2501 = negocio(2501);
+    if (n2501) {
+      crearSolicitud(n2501);
+      const s = S.solicitudes[0]; const last = s?.propuesta?.find(p => p.concepto === 'Saldo cuota inicial');
+      if (last) { last.valor -= 106111000; s.propuesta.push({ id: nid(), fecha: addM(1, 4), concepto: 'Abono extraordinario', valor: 106111000, abono: true }); }
+    }
+    const n1974 = negocio(1974);
+    if (n1974) {
+      const r2 = crearSolicitud(n1974);
+      const fut = r2.propuesta.filter(p => p.fecha > addM(3, 1)).sort((x, y) => y.fecha.localeCompare(x.fecha));
+      let quita = 0; fut.slice(0, 4).forEach(p => { quita += p.valor; p.valor = 0; });
+      r2.propuesta = r2.propuesta.filter(p => p.valor > 0);
+      r2.propuesta.push({ id: nid(), fecha: addM(1, 30), concepto: 'Cesantias', valor: quita, abono: true });
+    }
+    persist();
+  } else { S.solActiva = S.solicitudes[0].id; }
+  renderAsesor();
+}
+init();
 </script>

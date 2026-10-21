@@ -41,7 +41,9 @@ def get_proyectos(request):
     return list(
         ProyectoConfig.objects.filter(activo=True).values(
             "id", "id_imx", "nombre", "metodo",
-            "tasa_cia", "tasa_cliente", "tope_pct", "umbral_pct", "cuota_min",
+            "tasa_cia", "tasa_cliente", "tasa_vpn",
+            "tope_pct", "umbral_pct", "cuota_min",
+            "concepto", "concepto_abono",
         )
     )
 
