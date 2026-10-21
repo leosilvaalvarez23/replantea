@@ -562,7 +562,7 @@ function calc(s) {
   const propuesta = s.propuesta.map(p => ({ fecha: p.fecha, valor: p.valor }));
   const totProp = propuesta.reduce((t, p) => t + p.valor, 0);
   const dif = Math.round(a.saldo - totProp);
-  const ev = Engine.evaluar({ pactado: a.pactado, recaudo: a.recaudo, propuesta, cfg: s.cfg, valorVenta: n.valor_venta });
+  const ev = Engine.evaluar({ pactado: a.base, recaudo: [], propuesta, cfg: s.cfg, valorVenta: n.valor_venta });
   const fechas = s.propuesta.map(p => p.fecha).sort();
   const checks = [
     { ok: Math.abs(dif) < 1, t: Math.abs(dif) < 1 ? 'La propuesta cubre todo el saldo por pagar' : (dif > 0 ? `Faltan ${fmt(dif)} por asignar` : `Sobran ${fmt(-dif)}; reduce alguna cuota`) },
