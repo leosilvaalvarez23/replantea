@@ -542,7 +542,7 @@ function crearSolicitud(n) {
   const a = analizar(n);
   const id = 'SOL-' + String(1000 + S.solicitudes.length + 1);
   const token = Array.from(crypto.getRandomValues(new Uint8Array(9)), b => b.toString(36).padStart(2, '0')).join('').slice(0, 14);
-  const prop = a.pend.map(p => ({ id: nid(), fecha: p.vencida ? CORTE : p.fecha, concepto: p.concepto, valor: p.valor, orig: p.valor, origFecha: p.fecha }));
+  const prop = a.pend.map(p => ({ id: nid(), fecha: p.vencida ? CORTE : p.fecha, concepto: p.concepto, valor: p.valor, orig: p.valor, origFecha: p.fecha, fijo: false }));
   const sol = { id, token, negId: n.id_venta, proyectoId: n.proyecto_id, creada: new Date().toISOString(), estado: 'Enviado al comprador', propuesta: prop, cfg: { ...proyecto(n.proyecto_id).cfg } };
   S.solicitudes.unshift(sol); S.solActiva = id; persist();
   const url = `${location.origin}/comprador/${token}`;
@@ -562,7 +562,7 @@ function calc(s) {
   const propuesta = s.propuesta.map(p => ({ fecha: p.fecha, valor: p.valor }));
   const totProp = propuesta.reduce((t, p) => t + p.valor, 0);
   const dif = Math.round(a.saldo - totProp);
-  const ev = Engine.evaluar({ pactado: a.base, recaudo: [], propuesta, cfg: s.cfg, valorVenta: n.valor_venta });
+  const ev = Engine.evaluar({ pactado: a.pactado, recaudo: a.recaudo, propuesta, cfg: s.cfg, valorVenta: n.valor_venta });
   const fechas = s.propuesta.map(p => p.fecha).sort();
   const checks = [
     { ok: Math.abs(dif) < 1, t: Math.abs(dif) < 1 ? 'La propuesta cubre todo el saldo por pagar' : (dif > 0 ? `Faltan ${fmt(dif)} por asignar` : `Sobran ${fmt(-dif)}; reduce alguna cuota`) },
@@ -573,6 +573,16 @@ function calc(s) {
   ];
   if (ev.topado) checks.push({ ok: true, t: `El descuento se limitó al tope del proyecto (${pct(s.cfg.topePct)} de la venta)` });
   return { n, a, totProp, dif, ev, checks, valido: checks.every(c => c.ok), fechas };
+}
+function rebalancear(s) {
+  const libres = s.propuesta.filter(p => !p.fijo).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  if (!libres.length) return;
+  const a = analizar(negocio(s.negId));
+  const totFijos = s.propuesta.filter(p => p.fijo).reduce((t, p) => t + p.valor, 0);
+  const saldo = a.saldo - totFijos;
+  const base = Math.floor(saldo / libres.length);
+  for (let i = 0; i < libres.length - 1; i++) libres[i].valor = base;
+  libres[libres.length - 1].valor = Math.round(saldo - base * (libres.length - 1));
 }
 function renderCliente() {
   const s = sol();
@@ -591,7 +601,7 @@ function renderCliente() {
     <td>${p.lock ? `<span class="lock">${esc(p.concepto)} 🔒</span>` : `<select id="c_${p.id}">${[...new Set([p.concepto, ...conceptosDe(n.proyecto_id)])].map(c => `<option ${c === p.concepto ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>`}</td>
     <td>${p.lock ? `<div class="n mono lock">${fmt(p.valor)}</div>` : `<input class="num" id="v_${p.id}" value="${Math.round(p.valor).toLocaleString('es-CO')}" inputmode="numeric">`}</td>
     <td class="n muted small">${p.orig ? fmt(p.orig) + '<br>' + dmy(p.origFecha) : '—'}</td>
-    <td>${p.lock ? '' : `<button class="x" aria-label="Eliminar cuota" data-del="${p.id}">×</button>`}</td></tr>`).join('');
+    <td>${p.lock ? '' : `<button class="x" title="${p.fijo ? 'Liberar' : 'Fijar'}" data-tog="${p.id}">${p.fijo ? '🔒' : '🔓'}</button><button class="x" aria-label="Eliminar cuota" data-del="${p.id}">×</button>`}</td></tr>`).join('');
   $('#edTot').textContent = fmt(totProp);
   $('#edTotOrig').textContent = fmt(a.saldo);
   $('#edHint').textContent = (a.pend.some(p => p.vencida) ? 'Las cuotas vencidas se trasladaron a hoy; si las aplazas, se genera cargo financiero. ' : '') + `Crédito hipotecario de ${fmt(n.valor_credito)}: no se modifica aquí.`;
@@ -624,12 +634,18 @@ $('#edBody').addEventListener('change', e => {
   const p = s.propuesta.find(x => x.id === tr.dataset.id);
   if (e.target.id.startsWith('f_')) p.fecha = e.target.value || p.fecha;
   if (e.target.id.startsWith('c_')) p.concepto = e.target.value;
-  if (e.target.id.startsWith('v_')) p.valor = parseNum(e.target.value);
+  if (e.target.id.startsWith('v_')) { p.valor = parseNum(e.target.value); p.fijo = true; rebalancear(s); }
   persist(); renderCliente();
 });
-$('#edBody').addEventListener('click', e => { const id = e.target.dataset.del; if (!id) return; const s = sol(); s.propuesta = s.propuesta.filter(p => p.id !== id); persist(); renderCliente(); });
-$('#btnAdd').onclick = () => { const s = sol(); s.propuesta.push({ id: nid(), fecha: addM(1, 15), concepto: conceptoPrincipal(s.proyectoId), valor: s.cfg.cuotaMin }); persist(); renderCliente(); };
-$('#btnReset').onclick = () => { const s = sol(); const a = analizar(negocio(s.negId)); s.propuesta = a.pend.map(p => ({ id: nid(), fecha: p.vencida ? CORTE : p.fecha, concepto: p.concepto, valor: p.valor, orig: p.valor, origFecha: p.fecha })); persist(); renderCliente(); toast('Plan restaurado'); };
+$('#edBody').addEventListener('click', e => {
+  const s = sol();
+  const del = e.target.dataset.del;
+  if (del) { s.propuesta = s.propuesta.filter(p => p.id !== del); rebalancear(s); persist(); renderCliente(); return; }
+  const tog = e.target.dataset.tog;
+  if (tog) { const p = s.propuesta.find(x => x.id === tog); if (p) { p.fijo = !p.fijo; rebalancear(s); persist(); renderCliente(); } }
+});
+$('#btnAdd').onclick = () => { const s = sol(); s.propuesta.push({ id: nid(), fecha: addM(1, 15), concepto: conceptoPrincipal(s.proyectoId), valor: s.cfg.cuotaMin, fijo: false }); rebalancear(s); persist(); renderCliente(); };
+$('#btnReset').onclick = () => { const s = sol(); const a = analizar(negocio(s.negId)); s.propuesta = a.pend.map(p => ({ id: nid(), fecha: p.vencida ? CORTE : p.fecha, concepto: p.concepto, valor: p.valor, orig: p.valor, origFecha: p.fecha, fijo: false })); persist(); renderCliente(); toast('Plan restaurado'); };
 function editables(s) { return s.propuesta.filter(p => !p.lock).sort((a, b) => b.fecha.localeCompare(a.fecha)); }
 $('#tAbBtn').onclick = () => {
   const s = sol(); const v = parseNum($('#tAbVal').value), f = $('#tAbFecha').value;
@@ -637,14 +653,14 @@ $('#tAbBtn').onclick = () => {
   let rest = v;
   for (const p of editables(s)) { if (rest <= 0) break; if (p.fecha <= f) continue; const r = Math.min(rest, p.valor); p.valor -= r; rest -= r; }
   s.propuesta = s.propuesta.filter(p => p.lock || p.valor > 0.5);
-  s.propuesta.push({ id: nid(), fecha: f, concepto: s.cfg.conceptoAbono, valor: v - rest, abono: true });
+  s.propuesta.push({ id: nid(), fecha: f, concepto: s.cfg.conceptoAbono, valor: v - rest, abono: true, lock: true, fijo: true });
   persist(); renderCliente(); toast(rest > 0 ? `Solo se pudieron reubicar ${fmt(v - rest)}` : `Abono de ${fmt(v)} agregado`);
 };
 $('#tRdBtn').onclick = () => {
   const s = sol(); const N = Math.round(parseNum($('#tRdN').value)), f = $('#tRdFecha').value;
   if (!(N > 0) || !f) return toast('Indica número de cuotas y fecha de la primera');
   const n = negocio(s.negId), a = analizar(n);
-  const fijo = s.propuesta.filter(p => p.lock || p.abono);
+  const fijo = s.propuesta.filter(p => p.fijo);
   const saldo = a.saldo - fijo.reduce((t, p) => t + p.valor, 0);
   const base = Math.floor(saldo / N);
   const d0 = new Date(f + 'T00:00:00Z');
@@ -656,7 +672,7 @@ $('#tCuadrar').onclick = () => { const s = sol(); const { dif } = calc(s); const
 // gráfica de pagos acumulados
 function drawChart(a, s, n) {
   const W = 760, H = 260, L = 64, R = 16, T = 14, B = 30;
-  const pagosOrig = [...a.recaudo, ...a.base];
+  const pagosOrig = a.pactado;
   const pagosProp = [...a.recaudo, ...s.propuesta.map(p => ({ fecha: p.fecha, valor: p.valor }))];
   const fechas = [...new Set([...pagosOrig, ...pagosProp].map(p => p.fecha))].sort();
   const cum = fl => { let t = 0; const m = {}; const byF = {}; fl.forEach(p => byF[p.fecha] = (byF[p.fecha] || 0) + p.valor); return fechas.map(f => (t += (byF[f] || 0))); };
