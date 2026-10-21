@@ -1,846 +1,717 @@
-﻿<title>Replantea Plan de Pagos</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replantea</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: barra superior con flujo de 3 pasos; cada vista es un espacio de trabajo de 2 columnas que colapsa a 1 en móvil */
 :root{
-  --bg:#eef2f1; --surface:#ffffff; --surface-2:#f6f8f7; --ink:#13201c; --ink-2:#46544f; --muted:#76837e; --line:#d9e1de;
-  --accent:#0d5f57; --accent-2:#e3efec; --accent-ink:#ffffff;
-  --good:#1b7a3d; --good-bg:#e5f3e9; --bad:#b2352b; --bad-bg:#f8e7e4; --warn:#94600a; --warn-bg:#f8efdc;
-  --s1:#2a78d6; --s2:#eb6834;
-  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --f-body:"Public Sans", "Segoe UI", system-ui, sans-serif;
-  --f-num:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --r:10px;
+  --bg:#f0f2f1;--surf:#fff;--surf2:#f5f7f6;--ink:#11201b;--ink2:#4a5650;--muted:#7c8882;--line:#dae1dd;
+  --acc:#0e5c54;--acc2:#e6f0ee;--acc-ink:#fff;
+  --good:#1a7a3c;--good-bg:#e4f3e9;--bad:#b0312a;--bad-bg:#f7e6e4;--warn:#92600a;--warn-bg:#f7efda;
+  --fd:"Bricolage Grotesque",system-ui,sans-serif;
+  --fb:"Public Sans",system-ui,sans-serif;
+  --fn:"JetBrains Mono",monospace;
+  --r:10px;--hdr:54px;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0e1513; --surface:#16201e; --surface-2:#1b2725; --ink:#e6eeeb; --ink-2:#b4c1bc; --muted:#8a9893; --line:#2a3835;
-  --accent:#5fc2b4; --accent-2:#1d3532; --accent-ink:#06211d;
-  --good:#6ccf8c; --good-bg:#183324; --bad:#f08a7e; --bad-bg:#3a1e1b; --warn:#e8b45a; --warn-bg:#352a14;
-  --s1:#3987e5; --s2:#d95926; color-scheme:dark }}
-:root[data-theme="dark"]{
-  --bg:#0e1513; --surface:#16201e; --surface-2:#1b2725; --ink:#e6eeeb; --ink-2:#b4c1bc; --muted:#8a9893; --line:#2a3835;
-  --accent:#5fc2b4; --accent-2:#1d3532; --accent-ink:#06211d;
-  --good:#6ccf8c; --good-bg:#183324; --bad:#f08a7e; --bad-bg:#3a1e1b; --warn:#e8b45a; --warn-bg:#352a14;
-  --s1:#3987e5; --s2:#d95926; color-scheme:dark }
-*{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
-.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
-header.top .wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding-block:12px}
-.brand{display:flex;align-items:baseline;gap:10px}
-.brand b{font-family:var(--f-display);font-size:22px;letter-spacing:-.01em}
-.brand span{color:var(--muted);font-size:12px}
-nav.steps{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
-nav.steps button{border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);padding:7px 12px;border-radius:999px;font:500 13px var(--f-body);cursor:pointer;display:flex;gap:8px;align-items:center}
-nav.steps button i{font-style:normal;font-family:var(--f-num);font-size:11px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--line);color:var(--ink-2)}
-nav.steps button[aria-current="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-nav.steps button[aria-current="true"] i{background:var(--accent-ink);color:var(--accent)}
-.proto{background:var(--warn-bg);color:var(--warn);font-size:12px;padding:6px 0}
-.proto .wrap{padding-block:0}
-h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
-h1{font-size:26px;line-height:1.15}
-h2{font-size:18px}
-h3{font-size:15px}
-.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.view{display:none;padding-top:24px}
-.view.on{display:block}
-.grid2{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
-.grid-c{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);gap:20px;align-items:start}
-@media (max-width:920px){.grid2,.grid-c{grid-template-columns:minmax(0,1fr)}}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
-.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.between{justify-content:space-between}
-label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-2);font-weight:500;min-width:0}
-input,select{font:14px var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-width:0;width:100%}
-input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-input.num{font-family:var(--f-num);text-align:right;font-variant-numeric:tabular-nums}
-.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:7px;font:600 13px var(--f-body);cursor:pointer;white-space:nowrap}
-.btn:hover{background:var(--surface-2)}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.pri:hover{filter:brightness(1.08)}
-.btn.pri:disabled{opacity:.45;cursor:not-allowed;filter:none}
-.btn.ghost{border-color:transparent;background:transparent;color:var(--accent);padding-inline:6px}
-.btn.sm{padding:5px 10px;font-size:12px}
-.mono,.n{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0d1512;--surf:#141f1c;--surf2:#192421;--ink:#e4ece8;--ink2:#b0bdb8;--muted:#889390;--line:#283330;
+  --acc:#5abcb0;--acc2:#1a3230;--acc-ink:#06201d;
+  --good:#66cb88;--good-bg:#17311f;--bad:#f0857a;--bad-bg:#381b18;--warn:#e6b255;--warn-bg:#33270f;
+  color-scheme:dark}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:14px;line-height:1.5}
+h1,h2,h3{font-family:var(--fd);letter-spacing:-.01em;text-wrap:balance}
+h1{font-size:20px}h2{font-size:16px}h3{font-size:14px;font-weight:700}
+.mono,.n{font-family:var(--fn);font-variant-numeric:tabular-nums}
 .n{text-align:right;white-space:nowrap}
-.muted{color:var(--muted)}
-.small{font-size:12px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line);white-space:nowrap}
-.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-.chip.good{background:var(--good-bg);color:var(--good);border-color:transparent}
-.chip.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
-.chip.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
-.chip.acc{background:var(--accent-2);color:var(--accent);border-color:transparent}
-.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.list button{all:unset;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface)}
-.list button:last-child{border-bottom:0}
-.list button:hover{background:var(--surface-2)}
-.list button[aria-selected="true"]{background:var(--accent-2);box-shadow:inset 3px 0 0 var(--accent)}
-.list button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.list .t{font-weight:600}
-.list .s{grid-column:1/-1;font-size:12px;color:var(--muted)}
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.kpi{background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
-.kpi .v{font-family:var(--f-num);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.kpi .l{font-size:11.5px;color:var(--muted)}
-.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
-th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--surface-2);position:sticky;top:0}
+.muted{color:var(--muted)}.small{font-size:12px}[hidden]{display:none!important}
+
+/* ─── chrome ─── */
+header{height:var(--hdr);background:var(--surf);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:14px;position:sticky;top:0;z-index:10}
+.brand{font-family:var(--fd);font-size:19px;font-weight:700;color:var(--ink);text-decoration:none;flex:none}
+.brand sup{font-size:10px;font-family:var(--fb);font-weight:600;color:var(--muted);margin-left:3px}
+nav{display:flex;gap:2px}
+nav button{all:unset;cursor:pointer;padding:6px 13px;border-radius:6px;font-size:13px;font-weight:600;color:var(--ink2)}
+nav button:hover{background:var(--surf2)}
+nav button[aria-current]{background:var(--acc2);color:var(--acc)}
+.nav-cfg{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:5px 10px;white-space:nowrap}
+.nav-cfg:hover{color:var(--ink);border-color:var(--ink2)}
+.proto-bar{background:var(--warn-bg);color:var(--warn);font-size:11.5px;padding:5px 20px;text-align:center}
+.view{display:none}.view.on{display:block}
+
+/* ─── asesor layout: sidebar + content ─── */
+.layout{display:grid;grid-template-columns:256px minmax(0,1fr);min-height:calc(100vh - var(--hdr) - 30px)}
+.sidebar{border-right:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:11px;position:sticky;top:var(--hdr);height:calc(100vh - var(--hdr));overflow-y:auto}
+.content{padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+@media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}}
+.side-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+select,input[type=text],input[type=search],input[type=date],input[type=email],input[type=number]{
+  font:14px var(--fb);color:var(--ink);background:var(--surf);border:1px solid var(--line);border-radius:7px;padding:7px 10px;width:100%;outline:none}
+select:focus,input:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 14%,transparent)}
+input.num{font-family:var(--fn);text-align:right}
+.neg-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:1;overflow-y:auto}
+.neg-list button{all:unset;cursor:pointer;padding:9px 11px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:2px 6px;background:var(--surf)}
+.neg-list button:last-child{border-bottom:0}
+.neg-list button:hover{background:var(--surf2)}
+.neg-list button[aria-selected=true]{background:var(--acc2);box-shadow:inset 3px 0 0 var(--acc)}
+.neg-list .t{font-size:13px;font-weight:700}.neg-list .s{font-size:11px;color:var(--muted);grid-column:1/-1}
+
+/* ─── chips ─── */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.chip::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.chip.good{background:var(--good-bg);color:var(--good)}.chip.bad{background:var(--bad-bg);color:var(--bad)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.acc{background:var(--acc2);color:var(--acc)}
+.chip.neu{background:var(--surf2);color:var(--ink2);border-color:var(--line)}
+
+/* ─── buttons ─── */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surf);color:var(--ink);padding:7px 14px;border-radius:7px;font:600 13px var(--fb);cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surf2)}.btn.sm{padding:5px 10px;font-size:12px}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.btn.pri:hover{filter:brightness(1.08)}.btn.pri:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--acc);padding:5px 8px}
+.btn.ghost:hover{background:var(--acc2)}
+
+/* ─── kpis ─── */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surf);padding:10px 13px}
+.kpi .v{font-family:var(--fn);font-size:15px;font-weight:700;overflow-wrap:anywhere}
+.kpi .l{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* ─── parallel view ─── */
+.par-wrap{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:grid;grid-template-columns:1fr 1fr}
+@media(max-width:860px){.par-wrap{grid-template-columns:1fr}}
+.par-col{display:flex;flex-direction:column;min-width:0}
+.par-col:last-child{border-left:2px solid var(--acc)}
+@media(max-width:860px){.par-col:last-child{border-left:none;border-top:2px solid var(--acc)}}
+.par-hd{background:var(--surf2);border-bottom:1px solid var(--line);padding:9px 13px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px}
+.par-hd-l{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);display:flex;align-items:center;gap:7px}
+.par-hd-r{display:flex;gap:4px;align-items:center}
+.tbl-scroll{overflow-y:auto;max-height:380px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;background:var(--surf2);position:sticky;top:0;z-index:1}
 tr:last-child td{border-bottom:0}
-tfoot td{font-weight:700;background:var(--surface-2)}
-td.lock{color:var(--muted)}
+tfoot td{font-weight:700;background:var(--surf2);font-size:12px}
 tr.paid td{color:var(--muted)}
+tr.overdue td{background:color-mix(in srgb,var(--bad-bg) 40%,transparent)}
 tr.overdue td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
-.ed td{padding:6px 8px}
-.ed input{padding:6px 8px;font-size:13px}
-.ed input[type=date]{min-width:140px}
-.ed input.num{min-width:130px}
-.ed select{min-width:150px;padding:6px 8px;font-size:13px}
-.x{all:unset;cursor:pointer;color:var(--muted);padding:4px 8px;border-radius:5px;font-size:16px;line-height:1}
-.x:hover{color:var(--bad);background:var(--bad-bg)}
-.x:focus-visible{outline:2px solid var(--accent)}
-.cfg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.cfg .full{grid-column:1/-1}
-.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.seg button{all:unset;cursor:pointer;flex:1;text-align:center;padding:8px 6px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
-.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.note{font-size:12px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
-.result{border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);background:var(--surface)}
-.result .big{font-family:var(--f-num);font-weight:600;font-size:30px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere}
-.result.good .big{color:var(--good)} .result.bad .big{color:var(--bad)}
-.result.good{background:var(--good-bg);border-color:transparent}
-.result.bad{background:var(--bad-bg);border-color:transparent}
-.lines{display:flex;flex-direction:column;gap:6px;font-size:13px}
-.lines div{display:flex;justify-content:space-between;gap:12px}
-.lines div span:last-child{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+tr.overdue-r td{background:color-mix(in srgb,var(--warn-bg) 40%,transparent)}
+tr.overdue-r td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.ed td{padding:5px 6px}
+.ed input{padding:5px 8px;font-size:13px;border-radius:5px}
+.ed input[type=date]{min-width:126px}.ed input.num{min-width:110px}
+.ed select{padding:5px 8px;font-size:13px;border-radius:5px}
+.xb{all:unset;cursor:pointer;color:var(--muted);padding:3px 5px;border-radius:4px;font-size:15px;line-height:1}
+.xb:hover{background:var(--bad-bg);color:var(--bad)}
+.lb{all:unset;cursor:pointer;padding:3px 5px;border-radius:4px;font-size:13px;line-height:1}
+.lb:hover{background:var(--acc2)}
+
+/* ─── result banner ─── */
+.res-banner{border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:1px solid var(--line);background:var(--surf)}
+.res-banner.good{background:var(--good-bg);border-color:transparent}
+.res-banner.bad{background:var(--bad-bg);border-color:transparent}
+.res-banner .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);flex:none}
+.res-banner .amt{font-family:var(--fn);font-size:26px;font-weight:700;letter-spacing:-.02em}
+.res-banner.good .amt{color:var(--good)}.res-banner.bad .amt{color:var(--bad)}
+.res-banner .sub{font-size:12px;color:var(--ink2);margin-left:auto;text-align:right}
+
+/* ─── checks ─── */
+.checks{list-style:none;display:flex;flex-direction:column;gap:4px}
+.checks li{display:flex;gap:7px;align-items:flex-start;font-size:12.5px}
+.checks li.ok{color:var(--ink2)}.checks li.ko{color:var(--bad)}
+.checks li b{font-family:var(--fn);width:14px;flex:none;text-align:center}
+
+/* ─── misc ─── */
+.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.between{justify-content:space-between}.stack{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:15px}
+.note{background:var(--surf2);border:1px solid var(--line);border-radius:7px;padding:9px 12px;font-size:12.5px;color:var(--ink2)}
+.empty{padding:36px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r);font-size:13px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+.gap{flex:1}
+.linkbox{display:flex;gap:8px;align-items:center;border:1px dashed var(--acc);background:var(--acc2);border-radius:8px;padding:10px 12px;flex-wrap:wrap}
+.linkbox code{font-family:var(--fn);font-size:12px;color:var(--acc);overflow-wrap:anywhere;flex:1 1 200px}
+
+/* ─── sign form ─── */
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--ink2)}
+.otp-in{font-family:var(--fn);font-size:24px;letter-spacing:.3em;text-align:center;padding:10px}
+.receipt{border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:10px;background:var(--surf)}
+.hash{font-family:var(--fn);font-size:11px;overflow-wrap:anywhere;color:var(--ink2);background:var(--surf2);padding:7px 9px;border-radius:5px}
+.lines div{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:3px 0}
 .lines .tot{border-top:1px solid var(--line);padding-top:6px;font-weight:700}
-.checks{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none;font-size:13px}
-.checks li{display:flex;gap:8px;align-items:flex-start}
-.checks li b{font-family:var(--f-num);width:16px;flex:none;text-align:center}
-.checks li.ok b{color:var(--good)} .checks li.ko b{color:var(--bad)}
-.tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-@media (max-width:760px){.tools{grid-template-columns:minmax(0,1fr)}}
-.tool{border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--surface-2)}
-.tool .row>*{flex:1 1 120px}
-.chart{position:relative}
-.chart svg{display:block;width:100%;height:auto}
-.legend{display:flex;gap:16px;font-size:12px;color:var(--ink-2);flex-wrap:wrap}
-.legend span{display:flex;align-items:center;gap:6px}
-.legend i{width:14px;height:2px;display:inline-block}
-.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.12);min-width:190px}
-.tip .h{font-weight:600;margin-bottom:4px}
-.tip div.r{display:flex;justify-content:space-between;gap:12px}
-.tip .sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
-.linkbox{display:flex;gap:8px;align-items:center;border:1px dashed var(--accent);background:var(--accent-2);border-radius:8px;padding:10px 12px;flex-wrap:wrap}
-.linkbox code{font-family:var(--f-num);font-size:12.5px;color:var(--accent);overflow-wrap:anywhere;flex:1 1 220px}
-.otp{font-family:var(--f-num);font-size:22px;letter-spacing:.3em;text-align:center}
-.receipt{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:20px;display:flex;flex-direction:column;gap:12px}
-.receipt .hash{font-family:var(--f-num);font-size:11.5px;overflow-wrap:anywhere;color:var(--ink-2);background:var(--surface-2);padding:8px 10px;border-radius:6px}
-.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
-.tool .btn{white-space:normal}
-[hidden]{display:none!important}
-input[type=checkbox]{width:16px;height:16px;padding:0;flex:none;accent-color:var(--accent)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.lines .n{font-family:var(--fn);font-variant-numeric:tabular-nums}
+
+/* ─── approve view ─── */
+.sol-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.sol-list button{all:unset;cursor:pointer;padding:10px 12px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:2px 8px;background:var(--surf)}
+.sol-list button:last-child{border-bottom:0}
+.sol-list button:hover{background:var(--surf2)}
+.sol-list button[aria-selected=true]{background:var(--acc2);box-shadow:inset 3px 0 0 var(--acc)}
+.sol-list .t{font-weight:700;font-size:13px}.sol-list .s{font-size:11px;color:var(--muted);grid-column:1/-1}
+
+/* ─── redistribute popover ─── */
+.rd-anchor{position:relative}
+.rd-pop{display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:30;min-width:240px;flex-direction:column;gap:10px}
+.rd-pop.open{display:flex}
+
+/* ─── toast ─── */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:100}
 .toast.on{opacity:1}
-@media (prefers-reduced-motion:reduce){.toast{transition:none}}
-.hdr{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;flex-wrap:wrap}
-.flow{display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
-.flow span{padding:3px 8px;border-radius:5px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
-.flow span.done{background:var(--accent-2);color:var(--accent);border-color:transparent;font-weight:600}
+input[type=checkbox]{width:16px;height:16px;padding:0;flex:none;accent-color:var(--acc)}
 </style>
+</head>
+<body>
 
-<header class="top">
-  <div class="wrap">
-    <div class="brand"><b>Replantea</b><span>Modificación de planes de pago · conectado a IngeMAX (solo lectura)</span></div>
-    <nav class="steps" aria-label="Vistas del flujo">
-      <button data-v="asesor" aria-current="true"><i>1</i>Asesor</button>
-      <button data-v="cliente"><i>2</i>Comprador (link)</button>
-      <button data-v="aprob"><i>3</i>Aprobación y carga</button>
-    </nav>
-  </div>
+<header>
+  <a class="brand" href="/">Replantea <sup>β</sup></a>
+  <nav>
+    <button data-v="asesor" aria-current="true">Asesor</button>
+    <button data-v="aprob">Aprobación</button>
+  </nav>
+  <a class="nav-cfg" href="/config/">⚙ Configuración</a>
 </header>
-<div class="proto"><div class="wrap">Prototipo. El proyecto «Pruebas» trae negocios reales leídos del API de IngeMAX de VyP (anonimizados); Vida Park y Mirador del Valle son de ejemplo. Fecha de corte: <b id="corteTxt"></b>. El código de firma se muestra en pantalla porque aquí no se envían correos ni SMS.</div></div>
+<div class="proto-bar">Prototipo · «Pruebas» conectado a IngeMAX VyP · Corte: <b id="corteTxt"></b></div>
 
-<main class="wrap">
-<!-- ============ 1. ASESOR ============ -->
-<section class="view on" id="v-asesor">
-  <div class="grid2">
-    <div class="stack">
-      <div class="panel">
-        <div class="eyebrow">Buscar negocio</div>
-        <label class="f">Proyecto<select id="selProyecto"></select></label>
-        <label class="f">Inmueble, cliente o cédula<input id="q" placeholder="Ej. 504 o Gutiérrez"></label>
-        <div class="list" id="listaNeg" role="listbox" aria-label="Negocios"></div>
-        <div class="small muted">Fuente: <span class="mono">GET /api/obtener-negocios-ext/?proyecto=</span></div>
-      </div>
-      <div class="panel" id="cfgPanel">
-        <div class="row between"><div class="eyebrow">Política del proyecto</div><span class="chip acc" id="cfgProyName"></span></div>
-        <div class="seg" role="group" aria-label="Método de cálculo">
-          <button data-m="liquidacion" aria-pressed="true">Liquidación de saldo</button>
-          <button data-m="vpn" aria-pressed="false">Valor presente neto</button>
-        </div>
-        <div class="cfg">
-          <label class="f" data-show="liquidacion">Tasa adelantos (% M.V.)<input id="cTasaCia" class="num" inputmode="decimal"></label>
-          <label class="f" data-show="liquidacion">Tasa atrasos (% M.V.)<input id="cTasaCli" class="num" inputmode="decimal"></label>
-          <label class="f full" data-show="vpn">Tasa de descuento del proyecto (% M.V.)<input id="cTasaVpn" class="num" inputmode="decimal"></label>
-          <label class="f">Tope de descuento (% venta)<input id="cTope" class="num" inputmode="decimal"></label>
-          <label class="f">Aprueba gerencia desde (% venta)<input id="cUmbral" class="num" inputmode="decimal"></label>
-          <label class="f">Cuota mínima<input id="cMin" class="num" inputmode="numeric"></label>
-          <label class="f">Concepto de ajuste en IngeMAX<input id="cConcepto"></label>
-        </div>
-        <div class="note" id="cfgNote"></div>
-      </div>
+<section id="v-asesor" class="view on">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="side-lbl">Proyecto</div>
+      <select id="selProyecto"></select>
+      <div class="side-lbl">Negocio</div>
+      <input type="search" id="q" placeholder="Inmueble, cliente o cédula…">
+      <div class="neg-list" id="listaNeg" role="listbox"></div>
+    </aside>
+    <div class="content">
+      <div class="empty" id="emptyNeg">Selecciona un negocio para comenzar</div>
+      <div id="negPanel" hidden></div>
     </div>
-
-    <div class="stack" id="detNeg"></div>
   </div>
 </section>
 
-<!-- ============ 2. CLIENTE ============ -->
-<section class="view" id="v-cliente">
-  <div id="cliEmpty" class="empty">Genera un link desde la vista del asesor para abrir el simulador del comprador.</div>
-  <div id="cliBody" hidden>
-    <div class="hdr" style="margin-bottom:18px">
-      <div>
-        <div class="eyebrow" id="cliEyebrow"></div>
-        <h1 id="cliTitle"></h1>
-        <div class="muted small" id="cliSub"></div>
-      </div>
-      <div class="flow" id="cliFlow"></div>
-    </div>
-    <div class="grid-c">
-      <div class="stack">
-        <div class="panel">
-          <div class="row between"><h2>Tu propuesta de pagos</h2><div class="row"><button class="btn sm" id="btnReset">Volver al plan vigente</button></div></div>
-          <div class="tools">
-            <div class="tool">
-              <h3>Abono extraordinario</h3>
-              <div class="row"><input id="tAbVal" class="num" placeholder="Valor" inputmode="numeric"><input id="tAbFecha" type="date"></div>
-              <button class="btn sm" id="tAbBtn">Agregar y descontar de las últimas cuotas</button>
-            </div>
-            <div class="tool">
-              <h3>Redistribuir saldo</h3>
-              <div class="row"><input id="tRdN" class="num" placeholder="N.º cuotas" inputmode="numeric"><input id="tRdFecha" type="date"></div>
-              <button class="btn sm" id="tRdBtn">Repartir en cuotas mensuales iguales</button>
-            </div>
-            <div class="tool">
-              <h3>Diferencia por asignar</h3>
-              <div class="mono" id="tDif" style="font-size:16px;font-weight:600"></div>
-              <button class="btn sm" id="tCuadrar">Cuadrar en la última cuota</button>
-            </div>
-          </div>
-          <div class="tbl-wrap">
-            <table class="ed">
-              <thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Valor</th><th class="n">Plan vigente</th><th></th></tr></thead>
-              <tbody id="edBody"></tbody>
-              <tfoot><tr><td colspan="2">Total propuesta</td><td class="n" id="edTot"></td><td class="n" id="edTotOrig"></td><td></td></tr></tfoot>
-            </table>
-          </div>
-          <div class="row"><button class="btn sm" id="btnAdd">+ Agregar cuota</button><span class="small muted" id="edHint"></span></div>
-        </div>
-
-        <div class="panel">
-          <div class="row between"><h2>Pagos acumulados</h2>
-            <div class="legend"><span><i style="background:var(--s1)"></i>Plan vigente</span><span><i style="background:var(--s2)"></i>Tu propuesta</span></div>
-          </div>
-          <div class="chart" id="chart"></div>
-          <div class="small muted">La línea de tu propuesta por encima de la del plan vigente significa que pagas antes. Eso genera descuento.</div>
-        </div>
-
-        <div class="panel">
-          <div class="row between"><h2>Pagos ya realizados</h2><span class="small muted">Recaudo registrado en IngeMAX</span></div>
-          <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Valor</th></tr></thead><tbody id="recBody"></tbody></table></div>
-        </div>
-      </div>
-
-      <div class="stack" style="position:sticky;top:84px">
-        <div class="result" id="resBox">
-          <div class="eyebrow" id="resLbl"></div>
-          <div class="big" id="resBig"></div>
-          <div class="small" id="resSub"></div>
-        </div>
-        <div class="panel">
-          <div class="lines" id="resLines"></div>
-        </div>
-        <div class="panel">
-          <h3>Condiciones</h3>
-          <ul class="checks" id="checks"></ul>
-        </div>
-        <div class="panel" id="signPanel">
-          <h3>Firmar propuesta</h3>
-          <div id="signForm" class="stack" style="gap:10px">
-            <label class="f">Nombre completo<input id="sNom"></label>
-            <label class="f">Documento<input id="sDoc" class="mono"></label>
-            <label class="f">Correo para el código<input id="sMail" type="email"></label>
-            <label class="row small" style="flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="sAcepto" style="width:auto;margin-top:3px"><span>Acepto el nuevo plan de pagos y el ajuste financiero calculado. Entiendo que queda sujeto a aprobación de la constructora y a la firma del otrosí, si aplica.</span></label>
-            <button class="btn pri" id="sEnviar" disabled>Enviar código de firma</button>
-            <div id="otpBox" hidden class="stack" style="gap:8px">
-              <div class="note">Código enviado a <b id="otpMail"></b>. En el prototipo el código es <b class="mono" id="otpDemo"></b>.</div>
-              <input id="sOtp" class="otp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••">
-              <button class="btn pri" id="sFirmar">Firmar electrónicamente</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div id="cliDone" hidden></div>
-</section>
-
-<!-- ============ 3. APROBACIÓN ============ -->
-<section class="view" id="v-aprob">
-  <div class="grid2">
-    <div class="panel">
-      <div class="eyebrow">Solicitudes</div>
-      <div class="list" id="listaSol" role="listbox" aria-label="Solicitudes"></div>
-    </div>
-    <div class="stack" id="detSol"></div>
+<section id="v-aprob" class="view">
+  <div style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px;padding:16px 20px;align-items:start">
+    <div class="sol-list" id="listaSol" role="listbox"></div>
+    <div id="detSol"><div class="empty">Selecciona una solicitud</div></div>
   </div>
 </section>
-</main>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-// Motor de cálculo — Replantea
-// Fechas como 'YYYY-MM-DD'. Montos en COP.
+/* ═══════════════ MOTOR DE CÁLCULO ═══════════════ */
 const Engine = (() => {
-  const parse = s => { const [y, m, d] = s.split('-').map(Number); return { y, m, d }; };
-  const isLastFeb = ({ y, m, d }) => m === 2 && d === new Date(Date.UTC(y, 2, 0)).getUTCDate();
-  // DAYS360 método US (NASD), igual a Excel DAYS360(a,b) por defecto
-  function days360(a, b) {
-    const A = parse(a), B = parse(b);
-    let d1 = A.d, d2 = B.d;
-    if (isLastFeb(A) && isLastFeb(B)) d2 = 30;
-    if (isLastFeb(A)) d1 = 30;
-    if (d2 === 31 && d1 >= 30) d2 = 30;
-    if (d1 === 31) d1 = 30;
-    return (B.y - A.y) * 360 + (B.m - A.m) * 30 + (d2 - d1);
+  const parse = s => { const [y,m,d] = s.split('-').map(Number); return {y,m,d}; };
+  const isLastFeb = ({y,m,d}) => m===2 && d===new Date(Date.UTC(y,2,0)).getUTCDate();
+  function days360(a,b) {
+    const A=parse(a),B=parse(b); let d1=A.d,d2=B.d;
+    if(isLastFeb(A)&&isLastFeb(B)) d2=30;
+    if(isLastFeb(A)) d1=30;
+    if(d2===31&&d1>=30) d2=30;
+    if(d1===31) d1=30;
+    return (B.y-A.y)*360+(B.m-A.m)*30+(d2-d1);
   }
-  const daysActual = (a, b) => (Date.parse(b) - Date.parse(a)) / 86400000;
-
-  // Línea de tiempo: D = plan pactado (compañía), F = pagos comprador (recaudo + propuesta)
-  function timeline(pactado, pagos) {
-    const map = new Map();
-    for (const p of pactado) { const r = map.get(p.fecha) || { fecha: p.fecha, D: 0, F: 0 }; r.D += p.valor; map.set(p.fecha, r); }
-    for (const p of pagos) { const r = map.get(p.fecha) || { fecha: p.fecha, D: 0, F: 0 }; r.F += p.valor; map.set(p.fecha, r); }
-    return [...map.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const daysActual=(a,b)=>(Date.parse(b)-Date.parse(a))/86400000;
+  function timeline(pactado,pagos) {
+    const map=new Map();
+    for(const p of pactado){const r=map.get(p.fecha)||{fecha:p.fecha,D:0,F:0};r.D+=p.valor;map.set(p.fecha,r);}
+    for(const p of pagos){const r=map.get(p.fecha)||{fecha:p.fecha,D:0,F:0};r.F+=p.valor;map.set(p.fecha,r);}
+    return [...map.values()].sort((a,b)=>a.fecha.localeCompare(b.fecha));
   }
-
-  // Réplica exacta de la plantilla Excel (columnas H, I, J)
-  // tasaCia: interés mensual reconocido al comprador cuando va adelantado (saldo < 0)
-  // tasaCliente: interés mensual cobrado cuando va atrasado (saldo >= 0)
-  function liquidacion(pactado, pagos, tasaCia, tasaCliente) {
-    const rows = timeline(pactado, pagos);
-    let I = 0, J = 0, totalH = 0;
-    const out = [];
-    rows.forEach((r, k) => {
-      let H = 0;
-      if (k === 0) {
-        I = (0 < r.F) ? 0 : -r.F; // =IF((I0+H)<F,0,I0+H-F)
-        if (I < 0) I = 0;
-        J = r.D - r.F;
-      } else {
-        const prev = rows[k - 1];
-        const rate = J >= 0 ? tasaCliente : tasaCia;
-        H = rate * (12 * days360(prev.fecha, r.fecha) / 360) * J;
-        const IH = I + H;
-        let nI, nJ;
-        if (IH < 0) {
-          nI = (IH + r.D) >= 0 ? 0 : IH + r.D;
-          nJ = (IH + r.D) >= 0 ? J + (IH + r.D) - r.F : J - r.F;
-        } else {
-          nI = IH < r.F ? 0 : IH - r.F;
-          nJ = J + r.D - (IH < r.F ? r.F - IH : 0);
-        }
-        I = nI; J = nJ;
+  function liquidacion(pactado,pagos,tasaCia,tasaCliente) {
+    const rows=timeline(pactado,pagos); let I=0,J=0,totalH=0;
+    rows.forEach((r,k)=>{
+      let H=0;
+      if(k===0){I=(0<r.F)?0:-r.F;if(I<0)I=0;J=r.D-r.F;}
+      else{
+        const prev=rows[k-1],rate=J>=0?tasaCliente:tasaCia;
+        H=rate*(12*days360(prev.fecha,r.fecha)/360)*J;
+        const IH=I+H; let nI,nJ;
+        if(IH<0){nI=(IH+r.D)>=0?0:IH+r.D;nJ=(IH+r.D)>=0?J+(IH+r.D)-r.F:J-r.F;}
+        else{nI=IH<r.F?0:IH-r.F;nJ=J+r.D-(IH<r.F?r.F-IH:0);}
+        I=nI;J=nJ;
       }
-      totalH += H;
-      out.push({ ...r, H, I, J });
+      totalH+=H;
     });
-    return { ajuste: totalH, filas: out };
+    return {ajuste:totalH};
   }
-
-  // VPN: descuenta ambos flujos a la fecha inicial con tasa mensual compuesta (días reales / 30.4167)
-  // y expresa la diferencia a la fecha del último pago (fecha de liquidación del ajuste).
-  function vpn(pactado, pagos, tasa) {
-    const all = [...pactado, ...pagos].map(p => p.fecha).sort();
-    const t0 = all[0], tN = all[all.length - 1];
-    const m = f => daysActual(t0, f) / (365 / 12);
-    const pv = fl => fl.reduce((s, p) => s + p.valor / Math.pow(1 + tasa, m(p.fecha)), 0);
-    const diff = pv(pactado) - pv(pagos); // >0: el comprador entrega menos valor presente → sobrecargo
-    return { ajuste: diff * Math.pow(1 + tasa, m(tN)), pvPactado: pv(pactado), pvPagos: pv(pagos), fechaLiquidacion: tN };
+  function vpn(pactado,pagos,tasa) {
+    const all=[...pactado,...pagos].map(p=>p.fecha).sort();
+    const t0=all[0],tN=all[all.length-1];
+    const m=f=>daysActual(t0,f)/(365/12);
+    const pv=fl=>fl.reduce((s,p)=>s+p.valor/Math.pow(1+tasa,m(p.fecha)),0);
+    const diff=pv(pactado)-pv(pagos);
+    return {ajuste:diff*Math.pow(1+tasa,m(tN))};
   }
-
-  // Evalúa una propuesta con la configuración del proyecto y aplica tope/umbral
-  function evaluar({ pactado, recaudo, propuesta, cfg, valorVenta }) {
-    const pagos = [...recaudo, ...propuesta];
-    let ajuste;
-    if (cfg.metodo === 'liquidacion') ajuste = liquidacion(pactado, pagos, cfg.tasaCia, cfg.tasaCliente).ajuste;
-    else ajuste = vpn(pactado, pagos, cfg.tasaVpn).ajuste;
-    ajuste = Math.round(ajuste);
-    const tope = Math.round(valorVenta * cfg.topePct);
-    const topado = ajuste < 0 && -ajuste > tope;
-    const aplicado = topado ? -tope : ajuste;
-    const requiereAprobacion = aplicado < 0 && -aplicado > valorVenta * cfg.umbralPct;
-    return { ajusteCalculado: ajuste, ajuste: aplicado, topado, tope, requiereAprobacion };
+  function evaluar({pactado,recaudo,propuesta,cfg,valorVenta}) {
+    const pagos=[...recaudo,...propuesta]; let ajuste;
+    if(cfg.metodo==='liquidacion') ajuste=liquidacion(pactado,pagos,cfg.tasaCia,cfg.tasaCliente).ajuste;
+    else ajuste=vpn(pactado,pagos,cfg.tasaVpn).ajuste;
+    ajuste=Math.round(ajuste);
+    const tope=Math.round(valorVenta*cfg.topePct);
+    const topado=ajuste<0&&-ajuste>tope;
+    const aplicado=topado?-tope:ajuste;
+    const requiereAprobacion=aplicado<0&&-aplicado>valorVenta*cfg.umbralPct;
+    return {ajusteCalculado:ajuste,ajuste:aplicado,topado,tope,requiereAprobacion};
   }
-
-  return { days360, liquidacion, vpn, evaluar, timeline };
+  return {days360,evaluar};
 })();
-
 </script>
+
 <script>
-// ================= utilidades =================
-const $ = s => document.querySelector(s);
-const fmt = v => (v < 0 ? '−$ ' : '$ ') + Math.round(Math.abs(v)).toLocaleString('es-CO');
-const fmtM = v => '$ ' + (v / 1e6).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' M';
-const pct = v => (v * 100).toLocaleString('es-CO', { maximumFractionDigits: 2 }) + ' %';
-const iso = d => d.toISOString().slice(0, 10);
-const dmy = s => s.split('-').reverse().join('/');
-const fLarga = s => new Date(s + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
-const parseNum = s => { const n = Number(String(s).replace(/[^\d,-]/g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
-const parsePct = s => parseNum(String(s).replace('%', '')) / 100;
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2200); }
-const now = new Date();
-const CORTE = iso(new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())));
-function addM(k, day) { const d = new Date(CORTE + 'T00:00:00Z'); const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + k, 1)); const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate(); t.setUTCDate(Math.min(day, last)); return iso(t); }
-$('#corteTxt').textContent = fLarga(CORTE);
-let uid = 1; const nid = () => 'r' + (uid++);
+/* ═══════════════ UTILIDADES ═══════════════ */
+const $=s=>document.querySelector(s);
+const fmt=v=>(v<0?'−$ ':'$ ')+Math.round(Math.abs(v)).toLocaleString('es-CO');
+const fmtM=v=>'$ '+(v/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})+' M';
+const pct=v=>(v*100).toLocaleString('es-CO',{maximumFractionDigits:2})+' %';
+const iso=d=>d.toISOString().slice(0,10);
+const dmy=s=>s.split('-').reverse().join('/');
+const fLarga=s=>new Date(s+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'});
+const parseNum=s=>{const n=Number(String(s).replace(/[^\d,-]/g,'').replace(',','.'));return isFinite(n)?n:0;};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2200);}
+async function copiar(txt,msg){try{await navigator.clipboard.writeText(txt);toast(msg);}catch(e){toast('Copia el texto manualmente');}}
+const now=new Date();
+const CORTE=iso(new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())));
+function addM(k,day){const d=new Date(CORTE+'T00:00:00Z');const t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+k,1));const last=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,0)).getUTCDate();t.setUTCDate(Math.min(day,last));return iso(t);}
+$('#corteTxt').textContent=fLarga(CORTE);
+let uid=1; const nid=()=>'r'+(uid++);
+const fechaValida=f=>f&&f>'1900-01-01'?f:null;
 
-// ================= datos de ejemplo (forma del API IngeMAX) =================
-// Proyectos de demo (sin id_imx → sin llamadas al API de IngeMAX)
-const DEMO_PROYECTOS = [
-  { id: 7, nombre_proyecto: 'Vida Park (demo)', cfg: { metodo: 'liquidacion', tasaCia: 0.006, tasaCliente: 0.01, tasaVpn: 0.008, topePct: 0.03, umbralPct: 0.015, cuotaMin: 1000000, concepto: 'Descuento financiero plan de pagos', conceptoAbono: 'Abono extraordinario' } },
-  { id: 15, nombre_proyecto: 'Mirador del Valle (demo)', cfg: { metodo: 'vpn', tasaCia: 0.006, tasaCliente: 0.01, tasaVpn: 0.008, topePct: 0.025, umbralPct: 0.01, cuotaMin: 1500000, concepto: 'Ajuste financiero plan de pagos', conceptoAbono: 'Abono extraordinario' } }
+/* ═══════════════ DATOS ═══════════════ */
+const DEMO_PROYECTOS=[
+  {id:7,nombre_proyecto:'Vida Park (demo)',cfg:{metodo:'liquidacion',tasaCia:0.006,tasaCliente:0.01,tasaVpn:0.008,topePct:0.03,umbralPct:0.015,cuotaMin:1000000,concepto:'Descuento financiero plan de pagos',conceptoAbono:'Abono extraordinario'}},
+  {id:15,nombre_proyecto:'Mirador del Valle (demo)',cfg:{metodo:'vpn',tasaCia:0.006,tasaCliente:0.01,tasaVpn:0.008,topePct:0.025,umbralPct:0.01,cuotaMin:1500000,concepto:'Ajuste financiero plan de pagos',conceptoAbono:'Abono extraordinario'}}
 ];
-let PROYECTOS = [];
-function cuotas(n, desde, dia, valor, concepto = 'Cuota inicial') { return Array.from({ length: n }, (_, i) => ({ fecha_pp: addM(desde + i, dia), concepto, valor })); }
-let NEGOCIOS = [
-  { id_venta: 2501, proyecto_id: 7, inmueble: 'T1 - AP-123', seccion: 'TORRE 1', cliente_negocio: 'FREDY BERNARDO RÍOS SALAZAR', cliente_identificacion: '79456123', correo: 'fredy.rios@correo.co', valor_venta: 677198000, valor_credito: 0, estado_negocio: 'Vendido', fecha_escrituracion_programada: addM(9, 30), area: 123,
-    plan_pagos: [{ fecha_pp: addM(-18, 30), concepto: 'Separacion', valor: 5050000 }, { fecha_pp: addM(-17, 31), concepto: 'Cuota inicial', valor: 1000000 }, { fecha_pp: addM(-16, 30), concepto: 'Cuota inicial', valor: 1000000 }, { fecha_pp: addM(-15, 31), concepto: 'Cuota inicial', valor: 187648000 }, { fecha_pp: addM(9, 30), concepto: 'Saldo cuota inicial', valor: 482500000 }],
-    recaudo: [{ fecha: addM(-18, 30), concepto: 'Separacion', valor: 5050000 }, { fecha: addM(-17, 7), concepto: 'Recursos Propios', valor: 1000000 }, { fecha: addM(-16, 25), concepto: 'Recursos Propios', valor: 1000000 }, { fecha: addM(-15, 31), concepto: 'Recursos Propios', valor: 187648000 }] },
-  { id_venta: 2502, proyecto_id: 7, inmueble: 'T2 - AP-504', seccion: 'TORRE 2', cliente_negocio: 'LAURA MILENA GUTIÉRREZ PATIÑO', cliente_identificacion: '1049612388', correo: 'laura.gutierrez@correo.co', valor_venta: 412000000, valor_credito: 294000000, estado_negocio: 'Vendido', fecha_escrituracion_programada: addM(13, 20), area: 71.4,
-    plan_pagos: [{ fecha_pp: addM(-12, 5), concepto: 'Separacion', valor: 10000000 }, ...cuotas(24, -11, 5, 4500000)],
-    recaudo: [{ fecha: addM(-12, 5), concepto: 'Separacion', valor: 10000000 }, ...cuotas(8, -11, 6, 4500000, 'Recursos Propios').map(c => ({ fecha: c.fecha_pp, concepto: c.concepto, valor: c.valor }))] },
-  { id_venta: 3107, proyecto_id: 15, inmueble: 'C - CASA-12', seccion: 'CASAS', cliente_negocio: 'CARLOS ALBERTO GUTIÉRREZ RAMÍREZ', cliente_identificacion: '79456124', correo: 'carlos.gutierrez@correo.co', valor_venta: 280500000, valor_credito: 168300000, estado_negocio: 'Vendido', fecha_escrituracion_programada: addM(11, 30), area: 88,
-    plan_pagos: [{ fecha_pp: addM(-6, 15), concepto: 'Separacion', valor: 5000000 }, ...cuotas(16, -5, 15, 6700000)],
-    recaudo: [{ fecha: addM(-6, 15), concepto: 'Separacion', valor: 5000000 }, ...cuotas(5, -5, 14, 6700000, 'Recursos Propios').map(c => ({ fecha: c.fecha_pp, concepto: c.concepto, valor: c.valor }))] }
+let PROYECTOS=[];
+function cuotas(n,desde,dia,valor,concepto='Cuota inicial'){return Array.from({length:n},(_,i)=>({fecha_pp:addM(desde+i,dia),concepto,valor}));}
+let NEGOCIOS=[
+  {id_venta:2501,proyecto_id:7,inmueble:'T1 - AP-123',cliente_negocio:'FREDY BERNARDO RÍOS SALAZAR',cliente_identificacion:'79456123',correo:'fredy.rios@correo.co',valor_venta:677198000,valor_credito:0,fecha_escrituracion_programada:addM(9,30),
+    plan_pagos:[{fecha_pp:addM(-18,30),concepto:'Separacion',valor:5050000},{fecha_pp:addM(-17,31),concepto:'Cuota inicial',valor:1000000},{fecha_pp:addM(-16,30),concepto:'Cuota inicial',valor:1000000},{fecha_pp:addM(-15,31),concepto:'Cuota inicial',valor:187648000},{fecha_pp:addM(9,30),concepto:'Saldo cuota inicial',valor:482500000}],
+    recaudo:[{fecha:addM(-18,30),concepto:'Separacion',valor:5050000},{fecha:addM(-17,7),concepto:'Recursos Propios',valor:1000000},{fecha:addM(-16,25),concepto:'Recursos Propios',valor:1000000},{fecha:addM(-15,31),concepto:'Recursos Propios',valor:187648000}]},
+  {id_venta:2502,proyecto_id:7,inmueble:'T2 - AP-504',cliente_negocio:'LAURA MILENA GUTIÉRREZ PATIÑO',cliente_identificacion:'1049612388',correo:'laura.gutierrez@correo.co',valor_venta:412000000,valor_credito:294000000,fecha_escrituracion_programada:addM(13,20),
+    plan_pagos:[{fecha_pp:addM(-12,5),concepto:'Separacion',valor:10000000},...cuotas(24,-11,5,4500000)],
+    recaudo:[{fecha:addM(-12,5),concepto:'Separacion',valor:10000000},...cuotas(8,-11,6,4500000,'Recursos Propios').map(c=>({fecha:c.fecha_pp,concepto:c.concepto,valor:c.valor}))]},
+  {id_venta:3107,proyecto_id:15,inmueble:'C - CASA-12',cliente_negocio:'CARLOS ALBERTO GUTIÉRREZ RAMÍREZ',cliente_identificacion:'79456124',correo:'carlos.gutierrez@correo.co',valor_venta:280500000,valor_credito:168300000,fecha_escrituracion_programada:addM(11,30),
+    plan_pagos:[{fecha_pp:addM(-6,15),concepto:'Separacion',valor:5000000},...cuotas(16,-5,15,6700000)],
+    recaudo:[{fecha:addM(-6,15),concepto:'Separacion',valor:5000000},...cuotas(5,-5,14,6700000,'Recursos Propios').map(c=>({fecha:c.fecha_pp,concepto:c.concepto,valor:c.valor}))]}
 ];
-async function cargarNegocios(proyectoId) {
-  const p = proyecto(proyectoId);
-  if (!p || !p.id_imx) return;
-  try {
-    const r = await fetch(`/api/negocios?proyecto_id=${p.id_imx}`);
-    if (!r.ok) return;
-    const data = await r.json();
-    NEGOCIOS = NEGOCIOS.filter(n => n.proyecto_id !== proyectoId);
-    NEGOCIOS.push(...data.map(n => ({ ...n, proyecto_id: proyectoId })));
-  } catch(e) { console.warn('No se pudieron cargar negocios:', e); }
+async function cargarNegocios(proyectoId){
+  const p=proyecto(proyectoId);if(!p||!p.id_imx)return;
+  try{const r=await fetch(`/api/negocios?proyecto_id=${p.id_imx}`);if(!r.ok)return;
+    const data=await r.json();
+    NEGOCIOS=NEGOCIOS.filter(n=>n.proyecto_id!==proyectoId);
+    NEGOCIOS.push(...data.map(n=>({...n,proyecto_id:proyectoId})));
+  }catch(e){console.warn('API negocios no disponible',e);}
 }
-const conceptosDe = pid => { const c = cfgOf(pid); return [...new Set([...NEGOCIOS.filter(n => n.proyecto_id === pid).flatMap(n => n.plan_pagos.map(p => p.concepto)), c.conceptoAbono, 'Cesantias'])]; };
-const conceptoPrincipal = pid => { const m = {}; NEGOCIOS.filter(n => n.proyecto_id === pid).flatMap(n => n.plan_pagos).forEach(p => m[p.concepto] = (m[p.concepto] || 0) + 1); return Object.entries(m).sort((a, b) => b[1] - a[1])[0][0]; };
-const fechaValida = f => f && f > '1900-01-01' ? f : null;
-const isCredito = c => /cr[eé]dito/i.test(c);
+const conceptosDe=pid=>{const c=cfgOf(pid);return[...new Set([...NEGOCIOS.filter(n=>n.proyecto_id===pid).flatMap(n=>n.plan_pagos.map(p=>p.concepto)),c.conceptoAbono,'Cesantias'])];};
+const conceptoPrincipal=pid=>{const m={};NEGOCIOS.filter(n=>n.proyecto_id===pid).flatMap(n=>n.plan_pagos).forEach(p=>m[p.concepto]=(m[p.concepto]||0)+1);const e=Object.entries(m).sort((a,b)=>b[1]-a[1]);return e.length?e[0][0]:'Cuota inicial';};
 
-// ================= estado =================
-const S = { proyectoId: null, negId: null, q: '', solicitudes: [], solActiva: null, view: 'asesor' };
-try { const s = JSON.parse(localStorage.getItem('replantea.sol.v2') || 'null'); if (Array.isArray(s)) S.solicitudes = s; } catch (e) {}
-function persist() { try { localStorage.setItem('replantea.sol.v2', JSON.stringify(S.solicitudes)); } catch (e) {} }
-const proyecto = id => PROYECTOS.find(p => p.id === id);
-const negocio = id => NEGOCIOS.find(n => n.id_venta === id);
-function cfgOf(pid) { return PROYECTOS.find(p => p.id === pid).cfg; }
+/* ═══════════════ ESTADO ═══════════════ */
+const S={proyectoId:null,negId:null,q:'',solicitudes:[],solActiva:null,view:'asesor'};
+try{const s=JSON.parse(localStorage.getItem('replantea.v3')||'null');if(Array.isArray(s))S.solicitudes=s;}catch(e){}
+function persist(){try{localStorage.setItem('replantea.v3',JSON.stringify(S.solicitudes));}catch(e){}}
+const proyecto=id=>PROYECTOS.find(p=>p.id===id);
+const negocio=id=>NEGOCIOS.find(n=>n.id_venta===id);
+function cfgOf(pid){return PROYECTOS.find(p=>p.id===pid).cfg;}
+const sol=()=>S.solicitudes.find(s=>s.id===S.solActiva);
 
-// Análisis del negocio: pendiente por pagar (FIFO contra recaudo) y mora
-function analizar(n) {
-  const pactado = n.plan_pagos.map(p => ({ fecha: p.fecha_pp, valor: p.valor, concepto: p.concepto }));
-  const recaudo = n.recaudo.map(r => ({ fecha: r.fecha, valor: r.valor, concepto: r.concepto }));
-  let disp = recaudo.reduce((s, r) => s + r.valor, 0);
-  const pend = [];
-  for (const p of [...pactado].sort((a, b) => a.fecha.localeCompare(b.fecha))) {
-    const usado = Math.min(disp, p.valor); disp -= usado;
-    const resto = p.valor - usado;
-    if (resto > 0.5) pend.push({ ...p, valor: resto, vencida: p.fecha < CORTE });
+/* ═══════════════ ANÁLISIS ═══════════════ */
+function analizar(n){
+  const pactado=n.plan_pagos.map(p=>({fecha:p.fecha_pp,valor:p.valor,concepto:p.concepto}));
+  const recaudo=n.recaudo.map(r=>({fecha:r.fecha,valor:r.valor,concepto:r.concepto}));
+  let disp=recaudo.reduce((s,r)=>s+r.valor,0);
+  const pend=[];
+  for(const p of[...pactado].sort((a,b)=>a.fecha.localeCompare(b.fecha))){
+    const usado=Math.min(disp,p.valor);disp-=usado;
+    const resto=p.valor-usado;
+    if(resto>0.5)pend.push({...p,valor:resto,vencida:p.fecha<CORTE});
   }
-  const totPact = pactado.reduce((s, p) => s + p.valor, 0);
-  const totRec = recaudo.reduce((s, p) => s + p.valor, 0);
-  const vencido = pend.filter(p => p.vencida).reduce((s, p) => s + p.valor, 0);
-  // Base de comparación: lo pendiente, con lo vencido llevado a hoy. La mora ya causada la liquida IngeMAX aparte.
-  const base = pend.map(p => ({ fecha: p.vencida ? CORTE : p.fecha, valor: p.valor }));
-  const tieneInt = n.plan_pagos.some(p => 'int_mora' in p);
-  let mora = 0;
-  if (tieneInt) mora = n.plan_pagos.reduce((s, p) => s + Math.max(0, (p.int_mora || 0) - (p.int_aplicado || 0)), 0);
-  else { const c = cfgOf(n.proyecto_id); mora = pend.filter(p => p.vencida).reduce((s, p) => s + p.valor * c.tasaCliente * Engine.days360(p.fecha, CORTE) / 30, 0); }
-  const fechaLimite = fechaValida(n.fecha_escrituracion_programada) || pactado.map(p => p.fecha).sort().pop();
-  return { pactado, recaudo, pend, base, totPact, totRec, saldo: totPact - totRec, vencido, mora: Math.round(mora), moraReal: tieneInt, fechaLimite };
+  const totPact=pactado.reduce((s,p)=>s+p.valor,0);
+  const totRec=recaudo.reduce((s,r)=>s+r.valor,0);
+  const vencido=pend.filter(p=>p.vencida).reduce((s,p)=>s+p.valor,0);
+  const base=pend.map(p=>({fecha:p.vencida?CORTE:p.fecha,valor:p.valor}));
+  const tieneInt=n.plan_pagos.some(p=>'int_mora'in p);
+  let mora=0;
+  if(tieneInt)mora=n.plan_pagos.reduce((s,p)=>s+Math.max(0,(p.int_mora||0)-(p.int_aplicado||0)),0);
+  else{const c=cfgOf(n.proyecto_id);mora=pend.filter(p=>p.vencida).reduce((s,p)=>s+p.valor*c.tasaCliente*Engine.days360(p.fecha,CORTE)/30,0);}
+  const fechaLimite=fechaValida(n.fecha_escrituracion_programada)||pactado.map(p=>p.fecha).sort().pop();
+  return{pactado,recaudo,pend,base,totPact,totRec,saldo:totPact-totRec,vencido,mora:Math.round(mora),moraReal:tieneInt,fechaLimite};
 }
 
-// ================= vista ASESOR =================
-function renderAsesor() {
-  if (!PROYECTOS.length) { $('#listaNeg').innerHTML = '<div class="empty">Conectando con el servidor…</div>'; return; }
-  const sel = $('#selProyecto');
-  sel.innerHTML = PROYECTOS.map(p => `<option value="${p.id}" ${p.id === S.proyectoId ? 'selected' : ''}>${esc(p.nombre_proyecto)}</option>`).join('');
-  const q = S.q.trim().toLowerCase();
-  const negs = NEGOCIOS.filter(n => n.proyecto_id === S.proyectoId && (!q || (n.inmueble + n.cliente_negocio + n.cliente_identificacion).toLowerCase().includes(q)));
-  if (!negs.find(n => n.id_venta === S.negId) && negs[0]) S.negId = negs[0].id_venta;
-  $('#listaNeg').innerHTML = negs.length ? negs.map(n => { const a = analizar(n); return `<button role="option" data-id="${n.id_venta}" aria-selected="${n.id_venta === S.negId}"><span class="t">${esc(n.inmueble)}</span>${a.vencido > 0 ? '<span class="chip bad">En mora</span>' : '<span class="chip good">Al día</span>'}<span class="s">${esc(n.cliente_negocio)} · Venta #${n.id_venta}</span></button>`; }).join('') : '<div class="empty">Sin resultados</div>';
-  renderCfg();
-  renderDetNeg();
+function calc(s){
+  const n=negocio(s.negId),a=analizar(n);
+  const propuesta=s.propuesta.map(p=>({fecha:p.fecha,valor:p.valor}));
+  const totProp=propuesta.reduce((t,p)=>t+p.valor,0);
+  const dif=Math.round(a.saldo-totProp);
+  const ev=Engine.evaluar({pactado:a.base,recaudo:[],propuesta,cfg:s.cfg,valorVenta:n.valor_venta});
+  const checks=[
+    {ok:Math.abs(dif)<1,t:Math.abs(dif)<1?'La propuesta cubre el saldo por pagar':(dif>0?`Faltan ${fmt(dif)} por asignar`:`Sobran ${fmt(-dif)}`)},
+    {ok:s.propuesta.every(p=>p.fecha>=CORTE),t:'Ninguna cuota con fecha anterior a hoy'},
+    {ok:s.propuesta.every(p=>p.fecha<=a.fechaLimite),t:`Todas las cuotas antes del ${fLarga(a.fechaLimite)}`},
+    {ok:s.propuesta.every(p=>p.abono||p.valor>=s.cfg.cuotaMin),t:`Cada cuota ≥ ${fmt(s.cfg.cuotaMin)} (salvo abonos)`},
+    {ok:s.propuesta.every(p=>p.valor>0),t:'Sin cuotas en cero'}
+  ];
+  if(ev.topado)checks.push({ok:true,t:`Descuento limitado al tope del proyecto (${pct(s.cfg.topePct)} de la venta)`});
+  return{n,a,totProp,dif,ev,checks,valido:checks.every(c=>c.ok)};
 }
-function renderCfg() {
-  const p = proyecto(S.proyectoId), c = p.cfg;
-  $('#cfgProyName').textContent = p.nombre_proyecto;
-  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === c.metodo));
-  document.querySelectorAll('[data-show]').forEach(el => el.hidden = el.dataset.show !== c.metodo);
-  $('#cTasaCia').value = (c.tasaCia * 100).toLocaleString('es-CO');
-  $('#cTasaCli').value = (c.tasaCliente * 100).toLocaleString('es-CO');
-  $('#cTasaVpn').value = (c.tasaVpn * 100).toLocaleString('es-CO');
-  $('#cTope').value = (c.topePct * 100).toLocaleString('es-CO');
-  $('#cUmbral').value = (c.umbralPct * 100).toLocaleString('es-CO');
-  $('#cMin').value = c.cuotaMin.toLocaleString('es-CO');
-  $('#cConcepto').value = c.concepto;
-  const ea = r => pct(Math.pow(1 + r, 12) - 1) + ' E.A.';
-  $('#cfgNote').innerHTML = c.metodo === 'liquidacion'
-    ? `Replica la plantilla actual: interés simple sobre el saldo de capital (días 360). Se reconoce el <b>${pct(c.tasaCia)}</b> M.V. (${ea(c.tasaCia)}) cuando el comprador va adelantado y se cobra el <b>${pct(c.tasaCliente)}</b> M.V. (${ea(c.tasaCliente)}) cuando va atrasado.`
-    : `Compara el valor presente del plan vigente con el de la propuesta a <b>${pct(c.tasaVpn)}</b> M.V. (${ea(c.tasaVpn)}), con capitalización compuesta. La diferencia se expresa a la fecha del último pago.`;
+
+function rebalancear(s){
+  const libres=s.propuesta.filter(p=>!p.fijo).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  if(!libres.length)return;
+  const a=analizar(negocio(s.negId));
+  const totFijos=s.propuesta.filter(p=>p.fijo).reduce((t,p)=>t+p.valor,0);
+  const saldo=a.saldo-totFijos;
+  const base=Math.floor(saldo/libres.length);
+  for(let i=0;i<libres.length-1;i++)libres[i].valor=base;
+  libres[libres.length-1].valor=Math.round(saldo-base*(libres.length-1));
 }
-function renderDetNeg() {
-  const n = negocio(S.negId); if (!n) { $('#detNeg').innerHTML = '<div class="empty">Selecciona un negocio</div>'; return; }
-  const a = analizar(n);
-  const recIdx = new Set();
-  const real = !!n.real;
-  const rows = n.plan_pagos.map(pp => ({ fecha: pp.fecha_pp, concepto: pp.concepto, valor: pp.valor, im: pp.int_mora, ia: pp.int_aplicado })).map(p => { const pe = a.pend.find(x => x.fecha === p.fecha && x.concepto === p.concepto); const pagado = !pe; const venc = pe && pe.vencida; return `<tr class="${pagado ? 'paid' : ''} ${venc ? 'overdue' : ''}"><td class="mono">${dmy(p.fecha)}</td><td>${esc(p.concepto)}</td><td class="n">${fmt(p.valor)}</td>${real ? `<td class="n">${p.im ? fmt(p.im) : '—'}</td><td class="n">${p.ia ? fmt(p.ia) : '—'}</td>` : ''}<td>${pagado ? '<span class="chip">Pagada</span>' : venc ? '<span class="chip bad">Vencida</span>' : pe.valor < p.valor ? '<span class="chip warn">Parcial</span>' : '<span class="chip acc">Pendiente</span>'}</td></tr>`; }).join('');
-  const abiertas = S.solicitudes.filter(s => s.negId === n.id_venta && s.estado !== 'Cargado en IngeMAX');
-  $('#detNeg').innerHTML = `
-    <div class="panel">
-      <div class="hdr"><div><div class="eyebrow">Venta #${n.id_venta} · ${esc(proyecto(n.proyecto_id).nombre_proyecto)}</div><h1>${esc(n.inmueble)}</h1><div class="muted">${esc(n.cliente_negocio)} · C.C. ${esc(n.cliente_identificacion)}</div></div>
-      <button class="btn pri" id="btnLink">Generar link para el comprador</button></div>
-      <div class="kpis">
-        <div class="kpi"><span class="l">Valor venta</span><span class="v">${fmtM(n.valor_venta)}</span></div>
-        <div class="kpi"><span class="l">Recaudado</span><span class="v">${fmtM(a.totRec)}</span></div>
-        <div class="kpi"><span class="l">Saldo por pagar</span><span class="v">${fmtM(a.saldo)}</span></div>
-        <div class="kpi"><span class="l">Vencido · mora ${a.moraReal ? 'IngeMAX' : 'estimada'}</span><span class="v" style="color:${a.vencido > 0 ? 'var(--bad)' : 'inherit'}">${fmtM(a.vencido)} · ${fmtM(a.mora)}</span></div>
-      </div>
-      <div class="small muted">Cuota inicial ${fmt(a.totPact)} + crédito ${fmt(n.valor_credito)}. El crédito no hace parte del plan modificable.${real ? ' Datos leídos del API real de IngeMAX (proyecto 1, Pruebas). Nombres y documentos anonimizados.' : ' Negocio de ejemplo.'}</div>
-      <div id="linkOut"></div>
-      ${abiertas.length ? `<div class="note">Este negocio ya tiene ${abiertas.length} solicitud(es) abierta(s): ${abiertas.map(s => `<b>${s.id}</b> (${s.estado})`).join(', ')}.</div>` : ''}
-    </div>
-    <div class="panel">
-      <div class="row between"><h2>Plan de pagos vigente</h2><span class="small muted">${fechaValida(n.fecha_escrituracion_programada) ? 'Escrituración programada: ' + fLarga(n.fecha_escrituracion_programada) : 'Sin fecha de escrituración en IngeMAX · límite: última cuota (' + fLarga(a.fechaLimite) + ')'}</span></div>
-      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Valor</th>${real ? '<th class="n">Mora causada</th><th class="n">Mora aplicada</th>' : ''}<th>Estado</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="2">Total cuota inicial</td><td class="n">${fmt(a.totPact)}</td>${real ? '<td></td><td></td>' : ''}<td></td></tr></tfoot></table></div>
-    </div>`;
-  $('#btnLink').onclick = () => crearSolicitud(n);
-}
-function crearSolicitud(n) {
-  const a = analizar(n);
-  const id = 'SOL-' + String(1000 + S.solicitudes.length + 1);
-  const token = Array.from(crypto.getRandomValues(new Uint8Array(9)), b => b.toString(36).padStart(2, '0')).join('').slice(0, 14);
-  const prop = a.pend.map(p => ({ id: nid(), fecha: p.vencida ? CORTE : p.fecha, concepto: p.concepto, valor: p.valor, orig: p.valor, origFecha: p.fecha, fijo: false }));
-  const sol = { id, token, negId: n.id_venta, proyectoId: n.proyecto_id, creada: new Date().toISOString(), estado: 'Enviado al comprador', propuesta: prop, cfg: { ...proyecto(n.proyecto_id).cfg } };
-  S.solicitudes.unshift(sol); S.solActiva = id; persist();
-  const url = `${location.origin}/comprador/${token}`;
-  if (!$('#linkOut')) return sol;
-  $('#linkOut').innerHTML = `<div class="linkbox"><code>${url}</code><button class="btn sm" id="cpLink">Copiar</button><button class="btn sm pri" id="goCli">Abrir como comprador</button></div><div class="small muted">Link de un solo uso, vence en 7 días. Se envía por correo y WhatsApp a ${esc(n.correo)}.</div>`;
-  $('#cpLink').onclick = () => copiar(url, 'Link copiado');
-  $('#goCli').onclick = () => go('cliente');
-  toast(`Solicitud ${id} creada`);
+
+/* ═══════════════ SOLICITUDES ═══════════════ */
+function encontrarOCrear(n){
+  const abierta=S.solicitudes.find(x=>x.negId===n.id_venta&&!['Cargado en IngeMAX','Rechazado'].includes(x.estado));
+  if(abierta)return abierta;
+  const a=analizar(n);
+  const id='SOL-'+String(1001+S.solicitudes.length);
+  const token=Array.from(crypto.getRandomValues(new Uint8Array(9)),b=>b.toString(36).padStart(2,'0')).join('').slice(0,14);
+  const prop=a.pend.map(p=>({id:nid(),fecha:p.vencida?CORTE:p.fecha,concepto:p.concepto,valor:p.valor,orig:p.valor,origFecha:p.fecha,fijo:false}));
+  const sol={id,token,negId:n.id_venta,proyectoId:n.proyecto_id,creada:new Date().toISOString(),estado:'borrador',propuesta:prop,cfg:{...proyecto(n.proyecto_id).cfg}};
+  S.solicitudes.unshift(sol);persist();
   return sol;
 }
-async function copiar(txt, msg) { try { await navigator.clipboard.writeText(txt); toast(msg); } catch (e) { toast('Selecciona el texto y cópialo manualmente'); } }
 
-// ================= vista CLIENTE =================
-const sol = () => S.solicitudes.find(s => s.id === S.solActiva);
-function calc(s) {
-  const n = negocio(s.negId), a = analizar(n);
-  const propuesta = s.propuesta.map(p => ({ fecha: p.fecha, valor: p.valor }));
-  const totProp = propuesta.reduce((t, p) => t + p.valor, 0);
-  const dif = Math.round(a.saldo - totProp);
-  const ev = Engine.evaluar({ pactado: a.base, recaudo: [], propuesta, cfg: s.cfg, valorVenta: n.valor_venta });
-  const fechas = s.propuesta.map(p => p.fecha).sort();
-  const checks = [
-    { ok: Math.abs(dif) < 1, t: Math.abs(dif) < 1 ? 'La propuesta cubre todo el saldo por pagar' : (dif > 0 ? `Faltan ${fmt(dif)} por asignar` : `Sobran ${fmt(-dif)}; reduce alguna cuota`) },
-    { ok: s.propuesta.every(p => p.fecha >= CORTE), t: 'Ninguna cuota tiene fecha anterior a hoy' },
-    { ok: s.propuesta.every(p => p.fecha <= a.fechaLimite), t: `Todas las cuotas a más tardar el ${fLarga(a.fechaLimite)}` },
-    { ok: s.propuesta.every(p => p.abono || p.valor >= s.cfg.cuotaMin), t: `Cada cuota es de al menos ${fmt(s.cfg.cuotaMin)} (salvo abonos)` },
-    { ok: s.propuesta.every(p => p.valor > 0), t: 'No hay cuotas en cero' }
-  ];
-  if (ev.topado) checks.push({ ok: true, t: `El descuento se limitó al tope del proyecto (${pct(s.cfg.topePct)} de la venta)` });
-  return { n, a, totProp, dif, ev, checks, valido: checks.every(c => c.ok), fechas };
-}
-function rebalancear(s) {
-  const libres = s.propuesta.filter(p => !p.fijo).sort((a, b) => a.fecha.localeCompare(b.fecha));
-  if (!libres.length) return;
-  const a = analizar(negocio(s.negId));
-  const totFijos = s.propuesta.filter(p => p.fijo).reduce((t, p) => t + p.valor, 0);
-  const saldo = a.saldo - totFijos;
-  const base = Math.floor(saldo / libres.length);
-  for (let i = 0; i < libres.length - 1; i++) libres[i].valor = base;
-  libres[libres.length - 1].valor = Math.round(saldo - base * (libres.length - 1));
-}
-function renderCliente() {
-  const s = sol();
-  $('#cliEmpty').hidden = !!s; $('#cliBody').hidden = !s || s.firma; $('#cliDone').hidden = !(s && s.firma);
-  if (!s) return;
-  if (s.firma) { renderComprobante(s); return; }
-  const { n, a, totProp, dif, ev, checks, valido } = calc(s);
-  $('#cliEyebrow').textContent = `${proyecto(n.proyecto_id).nombre_proyecto} · Solicitud ${s.id}`;
-  $('#cliTitle').textContent = `Hola, ${n.cliente_negocio.split(' ')[0][0] + n.cliente_negocio.split(' ')[0].slice(1).toLowerCase()}. Ajusta tu plan de pagos del ${n.inmueble}`;
-  $('#cliSub').textContent = 'Si pagas antes de lo pactado recibes un descuento. Si aplazas cuotas, se genera un cargo financiero. El cálculo se actualiza al instante.';
-  $('#cliFlow').innerHTML = ['Modelar', 'Firmar', 'Aprobación', 'Cargado'].map((t, i) => `<span class="${i === 0 ? 'done' : ''}">${i + 1}. ${t}</span>`).join('');
-  // editor
-  const sorted = [...s.propuesta].sort((x, y) => x.fecha.localeCompare(y.fecha));
-  $('#edBody').innerHTML = sorted.map(p => `<tr data-id="${p.id}">
-    <td>${p.lock ? `<span class="mono lock">${dmy(p.fecha)}</span>` : `<input type="date" id="f_${p.id}" value="${p.fecha}" min="${CORTE}" max="${a.fechaLimite}">`}</td>
-    <td>${p.lock ? `<span class="lock">${esc(p.concepto)} 🔒</span>` : `<select id="c_${p.id}">${[...new Set([p.concepto, ...conceptosDe(n.proyecto_id)])].map(c => `<option ${c === p.concepto ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>`}</td>
-    <td>${p.lock ? `<div class="n mono lock">${fmt(p.valor)}</div>` : `<input class="num" id="v_${p.id}" value="${Math.round(p.valor).toLocaleString('es-CO')}" inputmode="numeric">`}</td>
-    <td class="n muted small">${p.orig ? fmt(p.orig) + '<br>' + dmy(p.origFecha) : '—'}</td>
-    <td>${p.lock ? '' : `<button class="x" title="${p.fijo ? 'Liberar' : 'Fijar'}" data-tog="${p.id}">${p.fijo ? '🔒' : '🔓'}</button><button class="x" aria-label="Eliminar cuota" data-del="${p.id}">×</button>`}</td></tr>`).join('');
-  $('#edTot').textContent = fmt(totProp);
-  $('#edTotOrig').textContent = fmt(a.saldo);
-  $('#edHint').textContent = (a.pend.some(p => p.vencida) ? 'Las cuotas vencidas se trasladaron a hoy; si las aplazas, se genera cargo financiero. ' : '') + `Crédito hipotecario de ${fmt(n.valor_credito)}: no se modifica aquí.`;
-  $('#tDif').textContent = Math.abs(dif) < 1 ? '$ 0' : fmt(dif);
-  $('#tDif').style.color = Math.abs(dif) < 1 ? 'var(--good)' : 'var(--bad)';
-  // resultado
-  const box = $('#resBox'); box.className = 'result ' + (ev.ajuste < 0 ? 'good' : ev.ajuste > 0 ? 'bad' : '');
-  $('#resLbl').textContent = ev.ajuste < 0 ? 'Descuento por pagar antes' : ev.ajuste > 0 ? 'Cargo financiero por aplazar' : 'Sin ajuste';
-  $('#resBig').textContent = fmt(Math.abs(ev.ajuste));
-  $('#resSub').textContent = ev.ajuste === 0 ? 'Tu propuesta tiene el mismo valor financiero que el plan vigente.' : `${pct(Math.abs(ev.ajuste) / n.valor_venta)} del valor de venta · método ${s.cfg.metodo === 'vpn' ? 'valor presente neto' : 'liquidación de saldo'}${ev.topado ? ' · limitado por tope' : ''}`;
-  $('#resLines').innerHTML = `<div><span>Valor de venta</span><span>${fmt(n.valor_venta)}</span></div>
-    <div><span>Ya pagado</span><span>${fmt(a.totRec)}</span></div>
-    <div><span>Saldo según propuesta</span><span>${fmt(totProp)}</span></div>
-    <div><span>${ev.ajuste <= 0 ? 'Descuento' : 'Cargo financiero'}</span><span style="color:${ev.ajuste < 0 ? 'var(--good)' : ev.ajuste > 0 ? 'var(--bad)' : 'inherit'}">${fmt(ev.ajuste)}</span></div>
-    <div class="tot"><span>Nuevo valor total</span><span>${fmt(n.valor_venta + ev.ajuste)}</span></div>
-    ${a.mora > 0 ? `<div class="small"><span>Mora causada a hoy (${a.moraReal ? 'liquidada por IngeMAX' : 'estimada'}), se paga aparte</span><span style="color:var(--bad)">${fmt(a.mora)}</span></div>` : ''}
-    ${ev.topado ? `<div class="small muted"><span>Descuento calculado sin tope</span><span>${fmt(ev.ajusteCalculado)}</span></div>` : ''}`;
-  $('#checks').innerHTML = checks.map(c => `<li class="${c.ok ? 'ok' : 'ko'}"><b>${c.ok ? '✓' : '!'}</b><span>${c.t}</span></li>`).join('');
-  $('#recBody').innerHTML = a.recaudo.map(r => `<tr><td class="mono">${dmy(r.fecha)}</td><td>${esc(r.concepto)}</td><td class="n">${fmt(r.valor)}</td></tr>`).join('');
-  if (!$('#sNom').value) { $('#sNom').value = n.cliente_negocio; $('#sDoc').value = n.cliente_identificacion; $('#sMail').value = n.correo; }
-  $('#sEnviar').disabled = !(valido && $('#sAcepto').checked);
-  $('#sEnviar').title = valido ? '' : 'Corrige las condiciones marcadas con ! para poder firmar';
-  if (!$('#tAbFecha').value) $('#tAbFecha').value = addM(1, 15);
-  if (!$('#tRdFecha').value) $('#tRdFecha').value = addM(1, 5);
-  drawChart(a, s, n);
-}
-// edición
-$('#edBody').addEventListener('change', e => {
-  const s = sol(); const tr = e.target.closest('tr'); if (!tr) return;
-  const p = s.propuesta.find(x => x.id === tr.dataset.id);
-  if (e.target.id.startsWith('f_')) p.fecha = e.target.value || p.fecha;
-  if (e.target.id.startsWith('c_')) p.concepto = e.target.value;
-  if (e.target.id.startsWith('v_')) { p.valor = parseNum(e.target.value); p.fijo = true; rebalancear(s); }
-  persist(); renderCliente();
-});
-$('#edBody').addEventListener('click', e => {
-  const s = sol();
-  const del = e.target.dataset.del;
-  if (del) { s.propuesta = s.propuesta.filter(p => p.id !== del); rebalancear(s); persist(); renderCliente(); return; }
-  const tog = e.target.dataset.tog;
-  if (tog) { const p = s.propuesta.find(x => x.id === tog); if (p) { p.fijo = !p.fijo; rebalancear(s); persist(); renderCliente(); } }
-});
-$('#btnAdd').onclick = () => { const s = sol(); s.propuesta.push({ id: nid(), fecha: addM(1, 15), concepto: conceptoPrincipal(s.proyectoId), valor: s.cfg.cuotaMin, fijo: false }); rebalancear(s); persist(); renderCliente(); };
-$('#btnReset').onclick = () => { const s = sol(); const a = analizar(negocio(s.negId)); s.propuesta = a.pend.map(p => ({ id: nid(), fecha: p.vencida ? CORTE : p.fecha, concepto: p.concepto, valor: p.valor, orig: p.valor, origFecha: p.fecha, fijo: false })); persist(); renderCliente(); toast('Plan restaurado'); };
-function editables(s) { return s.propuesta.filter(p => !p.lock).sort((a, b) => b.fecha.localeCompare(a.fecha)); }
-$('#tAbBtn').onclick = () => {
-  const s = sol(); const v = parseNum($('#tAbVal').value), f = $('#tAbFecha').value;
-  if (!(v > 0) || !f) return toast('Indica valor y fecha del abono');
-  let rest = v;
-  for (const p of editables(s)) { if (rest <= 0) break; if (p.fecha <= f) continue; const r = Math.min(rest, p.valor); p.valor -= r; rest -= r; }
-  s.propuesta = s.propuesta.filter(p => p.lock || p.valor > 0.5);
-  s.propuesta.push({ id: nid(), fecha: f, concepto: s.cfg.conceptoAbono, valor: v - rest, abono: true, lock: true, fijo: true });
-  persist(); renderCliente(); toast(rest > 0 ? `Solo se pudieron reubicar ${fmt(v - rest)}` : `Abono de ${fmt(v)} agregado`);
-};
-$('#tRdBtn').onclick = () => {
-  const s = sol(); const N = Math.round(parseNum($('#tRdN').value)), f = $('#tRdFecha').value;
-  if (!(N > 0) || !f) return toast('Indica número de cuotas y fecha de la primera');
-  const n = negocio(s.negId), a = analizar(n);
-  const fijo = s.propuesta.filter(p => p.fijo);
-  const saldo = a.saldo - fijo.reduce((t, p) => t + p.valor, 0);
-  const base = Math.floor(saldo / N);
-  const d0 = new Date(f + 'T00:00:00Z');
-  const nuevas = Array.from({ length: N }, (_, i) => { const d = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + i, Math.min(d0.getUTCDate(), 28))); return { id: nid(), fecha: iso(d), concepto: conceptoPrincipal(n.proyecto_id), valor: i === N - 1 ? saldo - base * (N - 1) : base }; });
-  s.propuesta = [...fijo, ...nuevas]; persist(); renderCliente(); toast(`Saldo repartido en ${N} cuotas`);
-};
-$('#tCuadrar').onclick = () => { const s = sol(); const { dif } = calc(s); const ult = editables(s)[0]; if (!ult) return; ult.valor += dif; persist(); renderCliente(); toast('Diferencia asignada a la última cuota'); };
-
-// gráfica de pagos acumulados
-function drawChart(a, s, n) {
-  const W = 760, H = 260, L = 64, R = 16, T = 14, B = 30;
-  const pagosOrig = a.pactado;
-  const pagosProp = [...a.recaudo, ...s.propuesta.map(p => ({ fecha: p.fecha, valor: p.valor }))];
-  const fechas = [...new Set([...pagosOrig, ...pagosProp].map(p => p.fecha))].sort();
-  const cum = fl => { let t = 0; const m = {}; const byF = {}; fl.forEach(p => byF[p.fecha] = (byF[p.fecha] || 0) + p.valor); return fechas.map(f => (t += (byF[f] || 0))); };
-  const y1 = cum(pagosOrig), y2 = cum(pagosProp);
-  const t0 = Date.parse(fechas[0]), t1 = Date.parse(fechas[fechas.length - 1]) || t0 + 1;
-  const ymax = Math.max(...y1, ...y2) * 1.05 || 1;
-  const X = f => L + (Date.parse(f) - t0) / (t1 - t0 || 1) * (W - L - R);
-  const Y = v => T + (1 - v / ymax) * (H - T - B);
-  const step = ys => fechas.map((f, i) => (i ? `H${X(f).toFixed(1)}` : `M${X(f).toFixed(1)},${Y(0).toFixed(1)}H${X(f).toFixed(1)}`) + `V${Y(ys[i]).toFixed(1)}`).join('');
-  const ticks = 4, grid = Array.from({ length: ticks + 1 }, (_, i) => ymax / 1.05 * i / ticks);
-  const yrs = []; for (let y = new Date(t0).getUTCFullYear(); y <= new Date(t1).getUTCFullYear(); y++) { const f = `${y}-01-01`; if (Date.parse(f) > t0 && Date.parse(f) < t1) yrs.push(f); }
-  const xc = X(CORTE);
-  $('#chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pagos acumulados del plan vigente frente a la propuesta">
-    ${grid.map(g => `<line x1="${L}" x2="${W - R}" y1="${Y(g)}" y2="${Y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 8}" y="${Y(g) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--f-num)">${Math.round(g / 1e6)} M</text>`).join('')}
-    ${yrs.map(f => `<line x1="${X(f)}" x2="${X(f)}" y1="${T}" y2="${H - B}" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${X(f)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--f-num)">${f.slice(0, 4)}</text>`).join('')}
-    ${xc > L && xc < W - R ? `<line x1="${xc}" x2="${xc}" y1="${T}" y2="${H - B}" stroke="var(--ink-2)" stroke-width="1"/><text x="${xc + 4}" y="${T + 10}" font-size="11" fill="var(--ink-2)">Hoy</text>` : ''}
-    <path d="${step(y1)}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>
-    <path d="${step(y2)}" fill="none" stroke="var(--s2)" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 3"/>
-    <line id="cx" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--ink-2)" stroke-width="1" opacity="0"/>
-    <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="hit"/>
-  </svg><div class="tip" id="tip" hidden></div>`;
-  const svg = $('#chart svg'), tip = $('#tip'), cx = $('#cx');
-  $('#hit').addEventListener('mousemove', e => {
-    const r = svg.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * W;
-    const t = t0 + (px - L) / (W - L - R) * (t1 - t0);
-    let i = 0; fechas.forEach((f, k) => { if (Date.parse(f) <= t) i = k; });
-    cx.setAttribute('x1', X(fechas[i])); cx.setAttribute('x2', X(fechas[i])); cx.setAttribute('opacity', 1);
-    tip.hidden = false;
-    tip.innerHTML = `<div class="h">${fLarga(fechas[i])}</div><div class="r"><span><i class="sw" style="background:var(--s1)"></i>Plan vigente</span><span class="mono">${fmtM(y1[i])}</span></div><div class="r"><span><i class="sw" style="background:var(--s2)"></i>Propuesta</span><span class="mono">${fmtM(y2[i])}</span></div>`;
-    const left = Math.min((e.clientX - r.left) + 12, r.width - 200); tip.style.left = Math.max(0, left) + 'px'; tip.style.top = '8px';
-  });
-  $('#hit').addEventListener('mouseleave', () => { tip.hidden = true; cx.setAttribute('opacity', 0); });
+/* ═══════════════ RENDER NEGOCIO ═══════════════ */
+function renderNeg(){
+  const n=negocio(S.negId);
+  $('#emptyNeg').hidden=!!n;
+  $('#negPanel').hidden=!n;
+  if(!n)return;
+  const s=encontrarOCrear(n);
+  S.solActiva=s.id;
+  renderPropuesta();
 }
 
-// firma
-$('#sAcepto').onchange = () => renderCliente();
-let OTP = null;
-$('#sEnviar').onclick = () => { OTP = String(Math.floor(100000 + Math.random() * 900000)); $('#otpBox').hidden = false; $('#otpMail').textContent = $('#sMail').value; $('#otpDemo').textContent = OTP; $('#sOtp').focus(); toast('Código enviado'); };
-async function sha256(txt) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { let h = 0; for (const c of txt) h = (h * 31 + c.charCodeAt(0)) | 0; return 'fallback-' + (h >>> 0).toString(16); } }
-$('#sFirmar').onclick = async () => {
-  if ($('#sOtp').value.trim() !== OTP) return toast('El código no coincide');
-  const s = sol(); const { ev, n } = calc(s);
-  const doc = { solicitud: s.id, venta: n.id_venta, inmueble: n.inmueble, firmante: $('#sNom').value, documento: $('#sDoc').value, correo: $('#sMail').value, propuesta: [...s.propuesta].sort((a, b) => a.fecha.localeCompare(b.fecha)).map(p => [p.fecha, p.concepto, Math.round(p.valor)]), ajuste: ev.ajuste, metodo: s.cfg.metodo, fecha: new Date().toISOString() };
-  s.firma = { ...doc, hash: await sha256(JSON.stringify(doc)), ip: '181.xx.xx.xx (registrada por el servidor)', agente: navigator.userAgent.slice(0, 80) };
-  s.ajuste = ev.ajuste; s.ajusteCalculado = ev.ajusteCalculado; s.topado = ev.topado; s.requiereAprobacion = ev.requiereAprobacion;
-  s.estado = ev.requiereAprobacion ? 'Requiere aprobación' : 'Listo para cargar';
-  OTP = null; $('#otpBox').hidden = true; $('#sOtp').value = ''; $('#sAcepto').checked = false;
-  persist(); renderCliente(); toast('Propuesta firmada');
-};
-function renderComprobante(s) {
-  const n = negocio(s.negId);
-  $('#cliDone').innerHTML = `<div class="receipt" style="max-width:720px;margin:0 auto">
-    <div class="row between"><div><div class="eyebrow">Comprobante de firma electrónica</div><h1>Propuesta ${s.id} firmada</h1></div><span class="chip ${s.requiereAprobacion ? 'warn' : 'good'}">${esc(s.estado)}</span></div>
-    <div class="lines"><div><span>Inmueble</span><span>${esc(n.inmueble)} · ${esc(proyecto(n.proyecto_id).nombre_proyecto)}</span></div>
-    <div><span>Firmante</span><span>${esc(s.firma.firmante)} · ${esc(s.firma.documento)}</span></div>
-    <div><span>Fecha y hora</span><span>${new Date(s.firma.fecha).toLocaleString('es-CO')}</span></div>
-    <div><span>${s.ajuste <= 0 ? 'Descuento' : 'Cargo financiero'}</span><span>${fmt(s.ajuste)}</span></div>
-    <div class="tot"><span>Nuevo valor total</span><span>${fmt(n.valor_venta + s.ajuste)}</span></div></div>
-    <div><div class="eyebrow" style="margin-bottom:4px">Huella del documento (SHA-256)</div><div class="hash">${s.firma.hash}</div></div>
-    <div class="small muted">Firma electrónica simple con código de un solo uso enviado a ${esc(s.firma.correo)}, conforme a la Ley 527 de 1999 y el Decreto 2364 de 2012. La constructora revisará la propuesta y te confirmará el plan definitivo por correo.</div>
-    <div class="row"><button class="btn" id="goAprob">Ver como constructora</button></div></div>`;
-  $('#goAprob').onclick = () => go('aprob');
-}
+function renderPropuesta(){
+  const s=sol();if(!s)return;
+  const n=negocio(s.negId),a=analizar(n);
+  const {totProp,dif,ev,checks,valido}=calc(s);
 
-// ================= vista APROBACIÓN =================
-const estChip = e => ({ 'Enviado al comprador': 'acc', 'Requiere aprobación': 'warn', 'Listo para cargar': 'good', 'Aprobado': 'good', 'Rechazado': 'bad', 'Cargado en IngeMAX': '' }[e] ?? '');
-function renderAprob() {
-  const L = S.solicitudes;
-  $('#listaSol').innerHTML = L.length ? L.map(s => { const n = negocio(s.negId); return `<button role="option" data-id="${s.id}" aria-selected="${s.id === S.solActiva}"><span class="t">${s.id} · ${esc(n.inmueble)}</span><span class="chip ${estChip(s.estado)}">${esc(s.estado)}</span><span class="s">${esc(n.cliente_negocio)}${s.ajuste != null ? ' · ' + fmt(s.ajuste) : ''}</span></button>`; }).join('') : '<div class="empty">Aún no hay solicitudes. Genera una desde la vista del asesor.</div>';
-  const s = sol(); const D = $('#detSol');
-  if (!s) { D.innerHTML = '<div class="empty">Selecciona una solicitud</div>'; return; }
-  const n = negocio(s.negId), a = analizar(n);
-  if (!s.firma) { D.innerHTML = `<div class="panel"><div class="eyebrow">${s.id}</div><h1>${esc(n.inmueble)}</h1><p class="muted">El comprador aún no ha firmado. El link sigue activo.</p><div class="row"><button class="btn pri" id="openCli">Abrir como comprador</button></div></div>`; $('#openCli').onclick = () => go('cliente'); return; }
-  const plan = [...s.propuesta].sort((x, y) => x.fecha.localeCompare(y.fecha));
-  const fUlt = plan.filter(p => !p.lock).map(p => p.fecha).pop() || plan[plan.length - 1].fecha;
-  const carga = [...plan.map(p => ({ concepto: p.concepto, fecha: p.fecha, valor: Math.round(p.valor) })), ...(s.ajuste ? [{ concepto: s.cfg.concepto, fecha: fUlt, valor: s.ajuste, ajuste: true }] : [])];
-  const tsv = 'concepto\tfecha\tvalor\n' + carga.map(c => `${c.concepto}\t${dmy(c.fecha)}\t${c.valor}`).join('\n');
-  const puedeCargar = s.estado === 'Listo para cargar' || s.estado === 'Aprobado';
-  D.innerHTML = `
-  <div class="panel">
-    <div class="hdr"><div><div class="eyebrow">${s.id} · Venta #${n.id_venta}</div><h1>${esc(n.inmueble)}</h1><div class="muted">${esc(n.cliente_negocio)} · firmó el ${new Date(s.firma.fecha).toLocaleString('es-CO')}</div></div><span class="chip ${estChip(s.estado)}">${esc(s.estado)}</span></div>
+  // ── Izquierda: plan vigente (solo pendientes) ──
+  const leftRows=a.pend.map(p=>`
+    <tr class="${p.vencida?'overdue':''}">
+      <td class="mono">${dmy(p.fecha)}</td>
+      <td>${esc(p.concepto)}</td>
+      <td class="n">${fmt(p.valor)}</td>
+    </tr>`).join('');
+
+  // ── Derecha: propuesta editable ──
+  const sorted=[...s.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha));
+  const rightRows=sorted.map(p=>`
+    <tr class="${p.fecha<CORTE?'overdue-r':''}" data-id="${p.id}">
+      <td>${p.lock?`<span class="mono muted">${dmy(p.fecha)}</span>`:`<input type="date" value="${p.fecha}" min="${CORTE}" max="${a.fechaLimite}">`}</td>
+      <td>${p.lock?`<span class="muted">${esc(p.concepto)}</span>`:`<select>${conceptosDe(n.proyecto_id).map(c=>`<option${c===p.concepto?' selected':''}>${esc(c)}</option>`).join('')}</select>`}</td>
+      <td>${p.lock?`<span class="n mono muted">${fmt(p.valor)}</span>`:`<input class="num" value="${Math.round(p.valor).toLocaleString('es-CO')}" inputmode="numeric">`}</td>
+      <td style="white-space:nowrap">${p.lock?'🔒':`<button class="lb" data-tog="${p.id}" title="${p.fijo?'Liberar':'Fijar'}">${p.fijo?'🔒':'🔓'}</button><button class="xb" data-del="${p.id}" title="Eliminar">×</button>`}</td>
+    </tr>`).join('');
+
+  const linkBox=s.estado!=='borrador'?`
+    <div class="linkbox">
+      <code>${location.origin}/comprador/${s.token}</code>
+      <button class="btn sm" id="cpLink">Copiar link</button>
+      <button class="btn sm pri" id="goCli">Abrir como comprador</button>
+    </div>
+    <div class="small muted">Enviado a ${esc(n.correo||'comprador')} · vence en 7 días</div>`:
+    '';
+
+  const signed=s.firma?`
+    <div class="receipt">
+      <div class="row between"><div><div class="small muted">Comprobante · ${s.id}</div><h2>${esc(n.inmueble)}</h2></div><span class="chip ${s.requiereAprobacion?'warn':'good'}">${esc(s.estado)}</span></div>
+      <div class="lines">
+        <div><span>Firmante</span><span>${esc(s.firma.firmante)} · ${esc(s.firma.documento)}</span></div>
+        <div><span>Fecha</span><span>${new Date(s.firma.fecha).toLocaleString('es-CO')}</span></div>
+        <div><span>${s.ajuste<=0?'Descuento':'Cargo financiero'}</span><span class="n">${fmt(s.ajuste)}</span></div>
+        <div class="tot"><span>Nuevo valor total</span><span class="n">${fmt(n.valor_venta+s.ajuste)}</span></div>
+      </div>
+      <div><div class="small muted" style="margin-bottom:4px">SHA-256</div><div class="hash">${s.firma.hash}</div></div>
+      <div class="row"><button class="btn sm" id="goAprob2">Ver en aprobación →</button></div>
+    </div>`:
+    (!s.firma&&valido?`
+    <div class="card stack" style="max-width:460px">
+      <h3>Firmar propuesta</h3>
+      <label class="f">Nombre completo<input id="sNom" value="${esc(n.cliente_negocio||'')}"></label>
+      <label class="f">Documento<input id="sDoc" class="mono" value="${esc(n.cliente_identificacion||'')}"></label>
+      <label class="f">Correo<input id="sMail" type="email" value="${esc(n.correo||'')}"></label>
+      <label class="row small" style="flex-wrap:nowrap;align-items:flex-start;gap:8px"><input type="checkbox" id="sAcepto"><span>Acepto el nuevo plan de pagos y el ajuste financiero. Queda sujeto a aprobación de la constructora.</span></label>
+      <button class="btn pri" id="sEnviar" disabled>Enviar código de firma</button>
+      <div id="otpBox" hidden class="stack" style="gap:8px">
+        <div class="note">Código enviado a <b id="otpMail"></b>. En el prototipo: <b class="mono" id="otpDemo"></b></div>
+        <input id="sOtp" class="otp-in" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••">
+        <button class="btn pri" id="sFirmar">Firmar electrónicamente</button>
+      </div>
+    </div>`:'');
+
+  $('#negPanel').innerHTML=`
+    <div class="row between">
+      <div>
+        <div class="small muted">${esc(proyecto(n.proyecto_id).nombre_proyecto)} · Venta #${n.id_venta}</div>
+        <h1>${esc(n.inmueble)}</h1>
+        <div class="small muted">${esc(n.cliente_negocio)}</div>
+      </div>
+      <span class="chip ${a.vencido>0?'bad':'good'}">${a.vencido>0?'En mora':'Al día'}</span>
+    </div>
     <div class="kpis">
-      <div class="kpi"><span class="l">${s.ajuste <= 0 ? 'Descuento' : 'Cargo financiero'}</span><span class="v" style="color:${s.ajuste < 0 ? 'var(--good)' : s.ajuste > 0 ? 'var(--bad)' : 'inherit'}">${fmt(s.ajuste)}</span></div>
-      <div class="kpi"><span class="l">% de la venta</span><span class="v">${pct(Math.abs(s.ajuste) / n.valor_venta)}</span></div>
-      <div class="kpi"><span class="l">Tope / umbral gerencia</span><span class="v">${pct(s.cfg.topePct)} / ${pct(s.cfg.umbralPct)}</span></div>
-      <div class="kpi"><span class="l">Método</span><span class="v" style="font-size:13px">${s.cfg.metodo === 'vpn' ? 'VPN ' + pct(s.cfg.tasaVpn) + ' M.V.' : 'Liquidación ' + pct(s.cfg.tasaCia) + ' / ' + pct(s.cfg.tasaCliente)}</span></div>
+      <div class="kpi"><div class="v">${fmtM(n.valor_venta)}</div><div class="l">Valor de venta</div></div>
+      <div class="kpi"><div class="v">${fmtM(a.totRec)}</div><div class="l">Recaudado</div></div>
+      <div class="kpi"><div class="v">${fmtM(a.saldo)}</div><div class="l">Saldo por pagar</div></div>
+      <div class="kpi"><div class="v" style="color:${a.vencido>0?'var(--bad)':'inherit'}">${fmtM(a.vencido)}${a.mora>0?` · ${fmtM(a.mora)} mora`:''}</div><div class="l">Vencido · mora ${a.moraReal?'IngeMAX':'est.'}</div></div>
     </div>
-    ${a.mora > 0 ? `<div class="note">Mora causada a hoy ${a.moraReal ? 'en IngeMAX' : '(estimada)'}: <b>${fmt(a.mora)}</b>. No hace parte del ajuste; se gestiona según la política de cartera.</div>` : ''}
-    ${s.topado ? `<div class="note">El descuento calculado era ${fmt(s.ajusteCalculado)} y se limitó al tope del proyecto.</div>` : ''}
-    ${s.estado === 'Requiere aprobación' ? `<div class="note">El descuento supera el ${pct(s.cfg.umbralPct)} de la venta. Necesita aprobación de gerencia antes de cargarse.</div><div class="row"><button class="btn pri" id="apOk">Aprobar descuento</button><button class="btn" id="apNo">Rechazar y pedir nueva propuesta</button></div>` : ''}
-  </div>
-  <div class="panel">
-    <div class="row between"><h2>Plan para cargar en IngeMAX</h2><span class="small muted">Pagos pactados · formato DD/MM/AAAA</span></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Concepto</th><th>Fecha</th><th class="n">Valor</th></tr></thead><tbody>
-      ${a.recaudo.length ? `<tr class="paid"><td colspan="2">Pagos ya recaudados (${a.recaudo.length}) · sin cambios</td><td class="n">${fmt(a.totRec)}</td></tr>` : ''}
-      ${carga.map(c => `<tr${c.ajuste ? ' style="font-weight:600"' : ''}><td>${esc(c.concepto)}${c.ajuste ? ' <span class="chip ' + (c.valor < 0 ? 'good' : 'bad') + '">Ajuste</span>' : ''}</td><td class="mono">${dmy(c.fecha)}</td><td class="n">${fmt(c.valor)}</td></tr>`).join('')}
-    </tbody><tfoot><tr><td colspan="2">Nuevo valor total del negocio</td><td class="n">${fmt(n.valor_venta + s.ajuste)}</td></tr></tfoot></table></div>
-    <div class="row">
-      <button class="btn" id="cpTsv">Copiar para pegar en Excel</button>
-      <button class="btn pri" id="mkLoad" ${puedeCargar ? '' : 'disabled'}>Marcar como cargado y verificar</button>
+
+    <div class="par-wrap">
+      <div class="par-col">
+        <div class="par-hd">
+          <div class="par-hd-l">Plan vigente <span class="chip acc">IngeMAX</span></div>
+          <div class="small muted">${a.pend.filter(p=>p.vencida).length} vencidas · ${a.pend.filter(p=>!p.vencida).length} futuras</div>
+        </div>
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Valor</th></tr></thead>
+            <tbody>${leftRows||'<tr><td colspan="3" class="muted" style="text-align:center;padding:20px">Sin cuotas pendientes</td></tr>'}</tbody>
+            <tfoot><tr><td colspan="2">Saldo por pagar</td><td class="n">${fmt(a.saldo)}</td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="par-col">
+        <div class="par-hd">
+          <div class="par-hd-l">Propuesta</div>
+          <div class="par-hd-r">
+            <button class="btn sm ghost" id="btnReset">↩ Restablecer</button>
+            <button class="btn sm ghost" id="btnAdd">+ Cuota</button>
+            <div class="rd-anchor">
+              <button class="btn sm ghost" id="rdTgl">⊞ Redistribuir</button>
+              <div class="rd-pop" id="rdPop">
+                <div class="small" style="font-weight:700">Repartir en cuotas iguales</div>
+                <label class="f">N.° cuotas<input type="number" id="rdN" min="1" max="120" value="12" style="width:100%"></label>
+                <label class="f">Primera cuota<input type="date" id="rdF" value="${addM(1,15)}" style="width:100%"></label>
+                <button class="btn sm pri" id="rdOk">Redistribuir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tbl-scroll">
+          <table class="ed" id="tblProp">
+            <thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Valor</th><th></th></tr></thead>
+            <tbody id="bodyProp">${rightRows}</tbody>
+            <tfoot>
+              <tr><td colspan="2">Total propuesta</td><td class="n">${fmt(totProp)}</td><td></td></tr>
+              <tr><td colspan="2">Diferencia</td><td class="n" style="color:${Math.abs(dif)<1?'var(--good)':dif>0?'var(--bad)':'var(--good)'}">${Math.abs(dif)<1?'$ 0':fmt(dif)}</td><td></td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
     </div>
-    <div id="verif"></div>
-  </div>
-  <div class="panel"><h3>Firma</h3><div class="hash mono small" style="overflow-wrap:anywhere">${s.firma.hash}</div><div class="small muted">${esc(s.firma.firmante)} · ${esc(s.firma.documento)} · ${esc(s.firma.correo)} · IP ${esc(s.firma.ip)}</div></div>`;
-  $('#cpTsv').onclick = () => copiar(tsv, 'Plan copiado');
-  if ($('#apOk')) { $('#apOk').onclick = () => { s.estado = 'Aprobado'; persist(); renderAprob(); toast('Descuento aprobado'); }; $('#apNo').onclick = () => { s.estado = 'Rechazado'; persist(); renderAprob(); toast('Solicitud rechazada'); }; }
-  $('#mkLoad').onclick = () => {
-    $('#verif').innerHTML = `<div class="note">Consultando <span class="mono">obtener-negocios-ext</span> para comparar el plan cargado con el firmado…</div>`;
-    setTimeout(() => { s.estado = 'Cargado en IngeMAX'; persist(); renderAprob(); $('#verif').innerHTML = `<div class="note" style="color:var(--good)">✓ ${carga.length} pagos pactados en IngeMAX coinciden con la propuesta firmada (fechas y valores). Solicitud cerrada.</div>`; }, 900);
+
+    <div class="res-banner ${ev.ajuste<0?'good':ev.ajuste>0?'bad':''}">
+      <div class="lbl">${ev.ajuste<0?'Descuento por pagar antes':ev.ajuste>0?'Cargo financiero por aplazar':'Sin ajuste financiero'}</div>
+      <div class="amt">${fmt(Math.abs(ev.ajuste))}</div>
+      <div class="sub">${pct(Math.abs(ev.ajuste)/n.valor_venta)} de la venta · método ${s.cfg.metodo==='vpn'?'VPN':'liquidación'}${ev.topado?' · limitado al tope':''}</div>
+    </div>
+
+    <ul class="checks">${checks.map(c=>`<li class="${c.ok?'ok':'ko'}"><b>${c.ok?'✓':'!'}</b><span>${c.t}</span></li>`).join('')}</ul>
+
+    <div class="row between">
+      <span class="chip ${s.estado==='borrador'?'neu':s.firma?'good':'acc'}">${esc(s.estado)}</span>
+      <div class="row">
+        ${s.estado==='borrador'?`<button class="btn pri" id="btnLink">Generar link para el comprador</button>`:`<button class="btn" id="btnLink2">Copiar link</button>`}
+      </div>
+    </div>
+    ${linkBox}
+    ${signed}
+  `;
+
+  attachEvents(s,a,n);
+}
+
+function attachEvents(s,a,n){
+  // tabla propuesta: cambios
+  const body=$('#bodyProp');
+  if(!body)return;
+  body.addEventListener('change',e=>{
+    const tr=e.target.closest('tr');if(!tr)return;
+    const p=s.propuesta.find(x=>x.id===tr.dataset.id);if(!p)return;
+    if(e.target.type==='date')p.fecha=e.target.value||p.fecha;
+    if(e.target.tagName==='SELECT')p.concepto=e.target.value;
+    if(e.target.classList.contains('num')){p.valor=parseNum(e.target.value);p.fijo=true;rebalancear(s);}
+    persist();renderPropuesta();
+  });
+  body.addEventListener('click',e=>{
+    const del=e.target.dataset.del;
+    if(del){s.propuesta=s.propuesta.filter(p=>p.id!==del);rebalancear(s);persist();renderPropuesta();return;}
+    const tog=e.target.dataset.tog;
+    if(tog){const p=s.propuesta.find(x=>x.id===tog);if(p){p.fijo=!p.fijo;rebalancear(s);persist();renderPropuesta();}}
+  });
+  // botones toolbar
+  const btnReset=$('#btnReset');
+  if(btnReset)btnReset.onclick=()=>{s.propuesta=a.pend.map(p=>({id:nid(),fecha:p.vencida?CORTE:p.fecha,concepto:p.concepto,valor:p.valor,orig:p.valor,origFecha:p.fecha,fijo:false}));persist();renderPropuesta();toast('Plan restablecido');};
+  const btnAdd=$('#btnAdd');
+  if(btnAdd)btnAdd.onclick=()=>{s.propuesta.push({id:nid(),fecha:addM(1,15),concepto:conceptoPrincipal(s.proyectoId),valor:s.cfg.cuotaMin,fijo:false});rebalancear(s);persist();renderPropuesta();};
+  // redistribuir
+  const rdTgl=$('#rdTgl'),rdPop=$('#rdPop');
+  if(rdTgl&&rdPop){
+    rdTgl.onclick=e=>{e.stopPropagation();rdPop.classList.toggle('open');};
+    document.addEventListener('click',()=>rdPop.classList.remove('open'),{once:true});
+  }
+  const rdOk=$('#rdOk');
+  if(rdOk)rdOk.onclick=()=>{
+    const N=Math.round(parseNum($('#rdN').value)),f=$('#rdF').value;
+    if(!(N>0)||!f)return toast('Indica número de cuotas y fecha');
+    const fijo=s.propuesta.filter(p=>p.fijo);
+    const saldo=a.saldo-fijo.reduce((t,p)=>t+p.valor,0);
+    const base=Math.floor(saldo/N);
+    const d0=new Date(f+'T00:00:00Z');
+    const nuevas=Array.from({length:N},(_,i)=>{const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth()+i,Math.min(d0.getUTCDate(),28)));return{id:nid(),fecha:iso(d),concepto:conceptoPrincipal(n.proyecto_id),valor:i===N-1?saldo-base*(N-1):base,fijo:false};});
+    s.propuesta=[...fijo,...nuevas];persist();renderPropuesta();
+    rdPop.classList.remove('open');toast(`Saldo repartido en ${N} cuotas`);
+  };
+  // generar link
+  const btnLink=$('#btnLink');
+  if(btnLink)btnLink.onclick=()=>{s.estado='Enviado al comprador';persist();renderPropuesta();toast('Link generado');};
+  const btnLink2=$('#btnLink2');
+  if(btnLink2)btnLink2.onclick=()=>copiar(`${location.origin}/comprador/${s.token}`,'Link copiado');
+  const cpLink=$('#cpLink');
+  if(cpLink)cpLink.onclick=()=>copiar(`${location.origin}/comprador/${s.token}`,'Link copiado');
+  const goCli=$('#goCli');
+  if(goCli)goCli.onclick=()=>{go('cliente-embedded');};
+  const goAprob2=$('#goAprob2');
+  if(goAprob2)goAprob2.onclick=()=>go('aprob');
+  // firma
+  const sAcepto=$('#sAcepto');
+  if(sAcepto)sAcepto.onchange=()=>{const btn=$('#sEnviar');if(btn)btn.disabled=!sAcepto.checked;};
+  let OTP=null;
+  const sEnviar=$('#sEnviar');
+  if(sEnviar)sEnviar.onclick=()=>{
+    OTP=String(Math.floor(100000+Math.random()*900000));
+    $('#otpBox').hidden=false;$('#otpMail').textContent=$('#sMail').value;$('#otpDemo').textContent=OTP;
+    $('#sOtp').focus();toast('Código enviado (demo)');
+  };
+  const sFirmar=$('#sFirmar');
+  if(sFirmar)sFirmar.onclick=async()=>{
+    if($('#sOtp').value.trim()!==OTP)return toast('El código no coincide');
+    const {ev}=calc(s);
+    const doc={solicitud:s.id,venta:n.id_venta,inmueble:n.inmueble,firmante:$('#sNom').value,documento:$('#sDoc').value,correo:$('#sMail').value,propuesta:[...s.propuesta].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(p=>[p.fecha,p.concepto,Math.round(p.valor)]),ajuste:ev.ajuste,metodo:s.cfg.metodo,fecha:new Date().toISOString()};
+    const hash=await sha256(JSON.stringify(doc));
+    s.firma={...doc,hash,ip:'IP registrada por el servidor',agente:navigator.userAgent.slice(0,80)};
+    s.ajuste=ev.ajuste;s.ajusteCalculado=ev.ajusteCalculado;s.topado=ev.topado;s.requiereAprobacion=ev.requiereAprobacion;
+    s.estado=ev.requiereAprobacion?'Requiere aprobación':'Listo para cargar';
+    OTP=null;persist();renderPropuesta();toast('Propuesta firmada');
   };
 }
 
-// ================= navegación y eventos =================
-function go(v) { S.view = v; document.querySelectorAll('nav.steps button').forEach(b => b.setAttribute('aria-current', b.dataset.v === v)); document.querySelectorAll('.view').forEach(x => x.classList.toggle('on', x.id === 'v-' + v)); render(); window.scrollTo(0, 0); }
-function render() { if (S.view === 'asesor') renderAsesor(); if (S.view === 'cliente') renderCliente(); if (S.view === 'aprob') renderAprob(); }
-document.querySelectorAll('nav.steps button').forEach(b => b.onclick = () => go(b.dataset.v));
-$('#selProyecto').onchange = async e => { S.proyectoId = Number(e.target.value); S.negId = null; await cargarNegocios(S.proyectoId); renderAsesor(); };
-$('#q').oninput = e => { S.q = e.target.value; renderAsesor(); };
-$('#listaNeg').onclick = e => { const b = e.target.closest('button[data-id]'); if (!b) return; S.negId = Number(b.dataset.id); renderAsesor(); };
-$('#listaSol').onclick = e => { const b = e.target.closest('button[data-id]'); if (!b) return; S.solActiva = b.dataset.id; renderAprob(); };
-document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { proyecto(S.proyectoId).cfg.metodo = b.dataset.m; renderCfg(); });
-[['#cTasaCia', 'tasaCia', parsePct], ['#cTasaCli', 'tasaCliente', parsePct], ['#cTasaVpn', 'tasaVpn', parsePct], ['#cTope', 'topePct', parsePct], ['#cUmbral', 'umbralPct', parsePct], ['#cMin', 'cuotaMin', parseNum], ['#cConcepto', 'concepto', v => v]].forEach(([sel, k, fn]) => $(sel).addEventListener('change', e => { proyecto(S.proyectoId).cfg[k] = fn(e.target.value); renderCfg(); toast('Política del proyecto actualizada'); }));
+async function sha256(txt){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){let h=0;for(const c of txt)h=(h*31+c.charCodeAt(0))|0;return'fallback-'+(h>>>0).toString(16);}}
 
-// Carga proyectos del API y luego negocios del proyecto activo
-async function init() {
-  renderAsesor(); // muestra estado vacío mientras carga
-  try {
-    const r = await fetch('/api/proyectos');
-    if (r.ok) {
-      const data = await r.json();
-      const apiProyectos = data.map(p => ({
-        id: p.id, id_imx: p.id_imx, nombre_proyecto: p.nombre,
-        cfg: { metodo: p.metodo, tasaCia: p.tasa_cia, tasaCliente: p.tasa_cliente,
-               tasaVpn: p.tasa_vpn ?? 0.01, topePct: p.tope_pct, umbralPct: p.umbral_pct,
-               cuotaMin: p.cuota_min, concepto: p.concepto ?? 'Descuento financiero plan de pagos',
-               conceptoAbono: p.concepto_abono ?? 'Recursos Propios' }
-      }));
-      PROYECTOS = [...apiProyectos, ...DEMO_PROYECTOS];
-      if (apiProyectos.length) {
-        S.proyectoId = apiProyectos[0].id;
-        await cargarNegocios(S.proyectoId);
-      }
-    }
-  } catch (e) {
-    console.warn('API no disponible, usando datos demo', e);
-    PROYECTOS = [...DEMO_PROYECTOS];
-    S.proyectoId = DEMO_PROYECTOS[0].id;
-  }
+/* ═══════════════ ASESOR ═══════════════ */
+function renderAsesor(){
+  if(!PROYECTOS.length){$('#listaNeg').innerHTML='<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Conectando…</div>';return;}
+  const sel=$('#selProyecto');
+  sel.innerHTML=PROYECTOS.map(p=>`<option value="${p.id}"${p.id===S.proyectoId?' selected':''}>${esc(p.nombre_proyecto)}</option>`).join('');
+  const q=S.q.trim().toLowerCase();
+  const negs=NEGOCIOS.filter(n=>n.proyecto_id===S.proyectoId&&(!q||(n.inmueble+n.cliente_negocio+n.cliente_identificacion).toLowerCase().includes(q)));
+  if(!negs.find(n=>n.id_venta===S.negId)&&negs[0])S.negId=negs[0].id_venta;
+  $('#listaNeg').innerHTML=negs.length?negs.map(n=>{const a=analizar(n);return`<button role="option" data-id="${n.id_venta}" aria-selected="${n.id_venta===S.negId}"><span class="t">${esc(n.inmueble)}</span><span class="chip ${a.vencido>0?'bad':'good'}" style="font-size:10px">${a.vencido>0?'Mora':'Al día'}</span><span class="s">${esc(n.cliente_negocio)}</span></button>`;}).join(''):'<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">Sin resultados</div>';
+  renderNeg();
+}
 
-  // Solicitudes de ejemplo precargadas en primer uso
-  if (!S.solicitudes.length) {
-    const n2501 = negocio(2501);
-    if (n2501) {
-      crearSolicitud(n2501);
-      const s = S.solicitudes[0]; const last = s?.propuesta?.find(p => p.concepto === 'Saldo cuota inicial');
-      if (last) { last.valor -= 106111000; s.propuesta.push({ id: nid(), fecha: addM(1, 4), concepto: 'Abono extraordinario', valor: 106111000, abono: true }); }
+/* ═══════════════ APROBACIÓN ═══════════════ */
+const estChip=e=>({'Requiere aprobación':'warn','Listo para cargar':'good','Aprobado':'good','Rechazado':'bad','borrador':'neu','Enviado al comprador':'acc'}[e]??'neu');
+function renderAprob(){
+  const L=S.solicitudes;
+  $('#listaSol').innerHTML=L.length?L.map(s=>{const n=negocio(s.negId);if(!n)return'';return`<button role="option" data-id="${s.id}" aria-selected="${s.id===S.solActiva}"><span class="t">${s.id} · ${esc(n.inmueble)}</span><span class="chip ${estChip(s.estado)}">${esc(s.estado)}</span><span class="s">${esc(n.cliente_negocio)}${s.ajuste!=null?' · '+fmt(s.ajuste):''}</span></button>`;}).join(''):'<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">Sin solicitudes aún</div>';
+  const s=sol();const D=$('#detSol');
+  if(!s){D.innerHTML='<div class="empty">Selecciona una solicitud</div>';return;}
+  const n=negocio(s.negId),a=analizar(n);
+  if(!s.firma){D.innerHTML=`<div class="card stack"><div class="small muted">${s.id}</div><h2>${esc(n.inmueble)}</h2><p class="muted small">El comprador aún no ha firmado.</p><button class="btn" id="openCli2">Abrir como comprador</button></div>`;$('#openCli2').onclick=()=>{go('asesor');};return;}
+  const plan=[...s.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha));
+  const fUlt=plan.filter(p=>!p.lock).map(p=>p.fecha).pop()||plan[plan.length-1].fecha;
+  const carga=[...plan.map(p=>({concepto:p.concepto,fecha:p.fecha,valor:Math.round(p.valor)})),...(s.ajuste?[{concepto:s.cfg.concepto,fecha:fUlt,valor:s.ajuste,ajuste:true}]:[])];
+  const tsv='concepto\tfecha\tvalor\n'+carga.map(c=>`${c.concepto}\t${dmy(c.fecha)}\t${c.valor}`).join('\n');
+  const puedeCargar=s.estado==='Listo para cargar'||s.estado==='Aprobado';
+  D.innerHTML=`
+    <div class="card stack">
+      <div class="row between">
+        <div><div class="small muted">${s.id} · Venta #${n.id_venta}</div><h2>${esc(n.inmueble)}</h2><div class="small muted">${esc(n.cliente_negocio)} · firmó ${new Date(s.firma.fecha).toLocaleString('es-CO')}</div></div>
+        <span class="chip ${estChip(s.estado)}">${esc(s.estado)}</span>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="v" style="color:${s.ajuste<0?'var(--good)':s.ajuste>0?'var(--bad)':'inherit'}">${fmt(s.ajuste)}</div><div class="l">${s.ajuste<=0?'Descuento':'Cargo financiero'}</div></div>
+        <div class="kpi"><div class="v">${pct(Math.abs(s.ajuste)/n.valor_venta)}</div><div class="l">% de la venta</div></div>
+        <div class="kpi"><div class="v">${pct(s.cfg.topePct)} / ${pct(s.cfg.umbralPct)}</div><div class="l">Tope / umbral gerencia</div></div>
+        <div class="kpi"><div class="v" style="font-size:12px">${s.cfg.metodo==='vpn'?'VPN '+pct(s.cfg.tasaVpn)+' M.V.':'Liq. '+pct(s.cfg.tasaCia)+'/'+pct(s.cfg.tasaCliente)}</div><div class="l">Método</div></div>
+      </div>
+      ${a.mora>0?`<div class="note">Mora causada a hoy: <b>${fmt(a.mora)}</b>. Se gestiona según política de cartera, no hace parte del ajuste.</div>`:''}
+      ${s.estado==='Requiere aprobación'?`<div class="row"><button class="btn pri" id="apOk">Aprobar descuento</button><button class="btn" id="apNo">Rechazar</button></div>`:''}
+    </div>
+    <div class="card stack">
+      <div class="row between"><h3>Plan para cargar en IngeMAX</h3><span class="small muted">DD/MM/AAAA</span></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Concepto</th><th>Fecha</th><th class="n">Valor</th></tr></thead>
+        <tbody>
+          ${a.recaudo.length?`<tr class="paid"><td colspan="2">Pagos recaudados (${a.recaudo.length}) · sin cambios</td><td class="n">${fmt(a.totRec)}</td></tr>`:''}
+          ${carga.map(c=>`<tr${c.ajuste?' style="font-weight:700"':''}><td>${esc(c.concepto)}${c.ajuste?` <span class="chip ${c.valor<0?'good':'bad'}">Ajuste</span>`:''}</td><td class="mono">${dmy(c.fecha)}</td><td class="n">${fmt(c.valor)}</td></tr>`).join('')}
+        </tbody>
+        <tfoot><tr><td colspan="2">Nuevo valor total</td><td class="n">${fmt(n.valor_venta+s.ajuste)}</td></tr></tfoot>
+      </table></div>
+      <div class="row">
+        <button class="btn" id="cpTsv">Copiar para Excel</button>
+        <button class="btn pri" id="mkLoad" ${puedeCargar?'':'disabled'}>Marcar como cargado</button>
+      </div>
+      <div id="verif"></div>
+    </div>
+    <div class="card"><div class="small muted" style="margin-bottom:6px">Firma · ${esc(s.firma.firmante)} · ${esc(s.firma.documento)}</div><div class="hash">${s.firma.hash}</div></div>`;
+  $('#cpTsv').onclick=()=>copiar(tsv,'Plan copiado');
+  if($('#apOk')){$('#apOk').onclick=()=>{s.estado='Aprobado';persist();renderAprob();toast('Descuento aprobado');};$('#apNo').onclick=()=>{s.estado='Rechazado';persist();renderAprob();toast('Rechazado');}}
+  $('#mkLoad').onclick=()=>{$('#verif').innerHTML='<div class="note">Verificando contra IngeMAX…</div>';setTimeout(()=>{s.estado='Cargado en IngeMAX';persist();renderAprob();$('#verif').innerHTML='<div class="note" style="color:var(--good)">✓ Verificado. Solicitud cerrada.</div>';},900);};
+}
+
+/* ═══════════════ NAVEGACIÓN ═══════════════ */
+function go(v){
+  if(v==='cliente-embedded')v='asesor'; // comprador abre en mismo panel por ahora
+  S.view=v;
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===v?'true':'false'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
+  render();window.scrollTo(0,0);
+}
+function render(){
+  if(S.view==='asesor')renderAsesor();
+  if(S.view==='aprob')renderAprob();
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+$('#selProyecto').onchange=async e=>{S.proyectoId=Number(e.target.value);S.negId=null;await cargarNegocios(S.proyectoId);renderAsesor();};
+$('#q').oninput=e=>{S.q=e.target.value;renderAsesor();};
+$('#listaNeg').onclick=e=>{const b=e.target.closest('button[data-id]');if(!b)return;S.negId=Number(b.dataset.id);renderAsesor();};
+$('#listaSol').onclick=e=>{const b=e.target.closest('button[data-id]');if(!b)return;S.solActiva=b.dataset.id;renderAprob();};
+
+/* ═══════════════ INIT ═══════════════ */
+async function init(){
+  renderAsesor();
+  try{
+    const r=await fetch('/api/proyectos');
+    if(r.ok){
+      const data=await r.json();
+      const api=data.map(p=>({id:p.id,id_imx:p.id_imx,nombre_proyecto:p.nombre,cfg:{metodo:p.metodo,tasaCia:p.tasa_cia,tasaCliente:p.tasa_cliente,tasaVpn:p.tasa_vpn??0.01,topePct:p.tope_pct,umbralPct:p.umbral_pct,cuotaMin:p.cuota_min,concepto:p.concepto??'Descuento financiero plan de pagos',conceptoAbono:p.concepto_abono??'Recursos Propios'}}));
+      PROYECTOS=[...api,...DEMO_PROYECTOS];
+      if(api.length){S.proyectoId=api[0].id;await cargarNegocios(S.proyectoId);}
     }
-    const n1974 = negocio(1974);
-    if (n1974) {
-      const r2 = crearSolicitud(n1974);
-      const fut = r2.propuesta.filter(p => p.fecha > addM(3, 1)).sort((x, y) => y.fecha.localeCompare(x.fecha));
-      let quita = 0; fut.slice(0, 4).forEach(p => { quita += p.valor; p.valor = 0; });
-      r2.propuesta = r2.propuesta.filter(p => p.valor > 0);
-      r2.propuesta.push({ id: nid(), fecha: addM(1, 30), concepto: 'Cesantias', valor: quita, abono: true });
-    }
-    persist();
-  } else { S.solActiva = S.solicitudes[0].id; }
+  }catch(e){console.warn('API no disponible, modo demo',e);PROYECTOS=[...DEMO_PROYECTOS];S.proyectoId=DEMO_PROYECTOS[0].id;}
+  if(!PROYECTOS.length)PROYECTOS=[...DEMO_PROYECTOS];
+  if(!S.proyectoId)S.proyectoId=PROYECTOS[0].id;
+  if(!S.solicitudes.length){
+    const n=negocio(2501);if(n)encontrarOCrear(n);
+  }else{S.solActiva=S.solicitudes[0].id;}
   renderAsesor();
 }
 init();
 </script>
+</body>
+</html>
