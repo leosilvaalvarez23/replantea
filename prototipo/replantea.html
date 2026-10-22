@@ -81,16 +81,14 @@ input.num{font-family:var(--fn);text-align:right}
 .kpi .v{font-family:var(--fn);font-size:15px;font-weight:700;overflow-wrap:anywhere}
 .kpi .l{font-size:11px;color:var(--muted);margin-top:1px}
 
-/* ─── parallel view ─── */
-.par-wrap{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:grid;grid-template-columns:1fr 1fr}
-@media(max-width:860px){.par-wrap{grid-template-columns:1fr}}
-.par-col{display:flex;flex-direction:column;min-width:0}
-.par-col:last-child{border-left:2px solid var(--acc)}
-@media(max-width:860px){.par-col:last-child{border-left:none;border-top:2px solid var(--acc)}}
-.par-hd{background:var(--surf2);border-bottom:1px solid var(--line);padding:9px 13px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px}
-.par-hd-l{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);display:flex;align-items:center;gap:7px}
-.par-hd-r{display:flex;gap:4px;align-items:center}
-.tbl-scroll{overflow-y:auto;max-height:380px}
+/* ─── tabla unificada ─── */
+.tbl-wrap{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.tbl-toolbar{background:var(--surf2);border-bottom:1px solid var(--line);padding:7px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tbl-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink2);margin-right:auto;display:flex;align-items:center;gap:7px}
+.tbl-scroll{overflow-y:auto;max-height:460px}
+td.uni-sep,th.uni-sep{width:4px;padding:0;background:var(--acc);border-bottom:1px solid color-mix(in srgb,var(--acc) 60%,transparent)}
+td.uni-blank{background:var(--surf2)!important;color:var(--muted);text-align:center;font-size:11px}
+tr.overdue td.uni-blank{background:color-mix(in srgb,var(--bad-bg) 25%,var(--surf2))!important}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;background:var(--surf2);position:sticky;top:0;z-index:1}
@@ -351,16 +349,18 @@ function calc(s){
   const propuesta=s.propuesta.map(p=>({fecha:p.fecha,valor:p.valor}));
   const totProp=propuesta.reduce((t,p)=>t+p.valor,0);
   const dif=Math.round(a.saldo-totProp);
+  const excedente=Math.max(0,-dif);
+  const nuevoCred=Math.max(0,n.valor_credito-excedente);
   const ev=Engine.evaluar({pactado:a.base,recaudo:[],propuesta,cfg:s.cfg,valorVenta:n.valor_venta});
   const checks=[
-    {ok:Math.abs(dif)<1,t:Math.abs(dif)<1?'La propuesta cubre el saldo por pagar':(dif>0?`Faltan ${fmt(dif)} por asignar`:`Sobran ${fmt(-dif)}`)},
+    {ok:dif<=1,t:dif>1?`Faltan ${fmt(dif)} por asignar`:excedente>0?`Supera cuota inicial en ${fmt(excedente)} — crédito pasa de ${fmtM(n.valor_credito)} a ${fmtM(nuevoCred)}`:'La propuesta cubre el saldo'},
     {ok:s.propuesta.every(p=>p.fecha>=CORTE),t:'Ninguna cuota con fecha anterior a hoy'},
     {ok:s.propuesta.every(p=>p.fecha<=a.fechaLimite),t:`Todas las cuotas antes del ${fLarga(a.fechaLimite)}`},
     {ok:s.propuesta.every(p=>p.abono||p.valor>=s.cfg.cuotaMin),t:`Cada cuota ≥ ${fmt(s.cfg.cuotaMin)} (salvo abonos)`},
     {ok:s.propuesta.every(p=>p.valor>0),t:'Sin cuotas en cero'}
   ];
   if(ev.topado)checks.push({ok:true,t:`Descuento limitado al tope del proyecto (${pct(s.cfg.topePct)} de la venta)`});
-  return{n,a,totProp,dif,ev,checks,valido:checks.every(c=>c.ok)};
+  return{n,a,totProp,dif,excedente,nuevoCred,ev,checks,valido:checks.every(c=>c.ok)};
 }
 
 function rebalancear(s){
@@ -401,25 +401,36 @@ function renderNeg(){
 function renderPropuesta(){
   const s=sol();if(!s)return;
   const n=negocio(s.negId),a=analizar(n);
-  const {totProp,dif,ev,checks,valido}=calc(s);
+  const {totProp,dif,excedente,nuevoCred,ev,checks,valido}=calc(s);
 
-  // ── Izquierda: plan vigente (solo pendientes) ──
-  const leftRows=a.pend.map(p=>`
-    <tr class="${p.vencida?'overdue':''}">
-      <td class="mono">${dmy(p.fecha)}</td>
-      <td>${esc(p.concepto)}</td>
-      <td class="n">${fmt(p.valor)}</td>
-    </tr>`).join('');
+  // ── Tabla unificada: plan vigente (izq) + propuesta (der) ──
+  const pendVenc=a.pend.filter(p=>p.vencida);
+  const pendFut=a.pend.filter(p=>!p.vencida);
+  const propSorted=[...s.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha));
+  const maxFut=Math.max(pendFut.length,propSorted.length);
 
-  // ── Derecha: propuesta editable ──
-  const sorted=[...s.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha));
-  const rightRows=sorted.map(p=>`
-    <tr class="${p.fecha<CORTE?'overdue-r':''}" data-id="${p.id}">
-      <td>${p.lock?`<span class="mono muted">${dmy(p.fecha)}</span>`:`<input type="date" value="${p.fecha}" min="${CORTE}" max="${a.fechaLimite}">`}</td>
-      <td>${p.lock?`<span class="muted">${esc(p.concepto)}</span>`:`<select>${conceptosDe(n.proyecto_id).map(c=>`<option${c===p.concepto?' selected':''}>${esc(c)}</option>`).join('')}</select>`}</td>
-      <td>${p.lock?`<span class="n mono muted">${fmt(p.valor)}</span>`:`<input class="num" value="${Math.round(p.valor).toLocaleString('es-CO')}" inputmode="numeric">`}</td>
-      <td style="white-space:nowrap">${p.lock?'🔒':`<button class="lb" data-tog="${p.id}" title="${p.fijo?'Liberar':'Fijar'}">${p.fijo?'🔒':'🔓'}</button><button class="xb" data-del="${p.id}" title="Eliminar">×</button>`}</td>
-    </tr>`).join('');
+  const uniRows=[
+    ...pendVenc.map(p=>`
+      <tr class="overdue">
+        <td class="mono">${dmy(p.fecha)}</td><td>${esc(p.concepto)}</td><td class="n">${fmt(p.valor)}</td>
+        <td class="uni-sep"></td>
+        <td colspan="3" class="uni-blank">—</td>
+      </tr>`),
+    ...Array.from({length:maxFut},(_,i)=>{
+      const L=pendFut[i]||null,R=propSorted[i]||null;
+      return `
+      <tr${R?` data-id="${R.id}"`:''}>${L?`
+        <td class="mono">${dmy(L.fecha)}</td><td>${esc(L.concepto)}</td><td class="n">${fmt(L.valor)}</td>`:`
+        <td colspan="3" class="uni-blank"></td>`}
+        <td class="uni-sep"></td>
+        ${R?`
+          <td>${R.fijo?`<span class="mono muted">${dmy(R.fecha)}</span>`:`<input type="date" value="${R.fecha}" min="${CORTE}" max="${a.fechaLimite}">`}</td>
+          <td>${R.fijo?`<span class="n mono muted">${fmt(R.valor)}</span>`:`<input class="num" value="${Math.round(R.valor).toLocaleString('es-CO')}" inputmode="numeric">`}</td>
+          <td style="white-space:nowrap"><button class="lb" data-tog="${R.id}">${R.fijo?'🔒':'🔓'}</button><button class="xb" data-del="${R.id}">×</button></td>`:`
+          <td colspan="3" class="uni-blank"></td>`}
+      </tr>`;
+    })
+  ].join('');
 
   const linkBox=s.estado!=='borrador'?`
     <div class="linkbox">
@@ -473,49 +484,61 @@ function renderPropuesta(){
       <div class="kpi"><div class="v" style="color:${a.vencido>0?'var(--bad)':'inherit'}">${fmtM(a.vencido)}${a.mora>0?` · ${fmtM(a.mora)} mora`:''}</div><div class="l">Vencido · mora ${a.moraReal?'IngeMAX':'est.'}</div></div>
     </div>
 
-    <div class="par-wrap">
-      <div class="par-col">
-        <div class="par-hd">
-          <div class="par-hd-l">Plan vigente <span class="chip acc">IngeMAX</span></div>
-          <div class="small muted">${a.pend.filter(p=>p.vencida).length} vencidas · ${a.pend.filter(p=>!p.vencida).length} futuras</div>
-        </div>
-        <div class="tbl-scroll">
-          <table>
-            <thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Valor</th></tr></thead>
-            <tbody>${leftRows||'<tr><td colspan="3" class="muted" style="text-align:center;padding:20px">Sin cuotas pendientes</td></tr>'}</tbody>
-            <tfoot><tr><td colspan="2">Saldo por pagar</td><td class="n">${fmt(a.saldo)}</td></tr></tfoot>
-          </table>
-        </div>
-      </div>
-      <div class="par-col">
-        <div class="par-hd">
-          <div class="par-hd-l">Propuesta</div>
-          <div class="par-hd-r">
-            <button class="btn sm ghost" id="btnReset">↩ Restablecer</button>
-            <button class="btn sm ghost" id="btnAdd">+ Cuota</button>
-            <div class="rd-anchor">
-              <button class="btn sm ghost" id="rdTgl">⊞ Redistribuir</button>
-              <div class="rd-pop" id="rdPop">
-                <div class="small" style="font-weight:700">Repartir en cuotas iguales</div>
-                <label class="f">N.° cuotas<input type="number" id="rdN" min="1" max="120" value="12" style="width:100%"></label>
-                <label class="f">Primera cuota<input type="date" id="rdF" value="${addM(1,15)}" style="width:100%"></label>
-                <button class="btn sm pri" id="rdOk">Redistribuir</button>
-              </div>
-            </div>
+    <div class="tbl-wrap">
+      <div class="tbl-toolbar">
+        <span class="tbl-title">Plan vigente <span class="chip acc" style="font-size:10px">IngeMAX</span> vs. Propuesta</span>
+        <button class="btn sm ghost" id="btnReset">↩ Restablecer</button>
+        <button class="btn sm ghost" id="btnAdd">+ Cuota</button>
+        <div class="rd-anchor">
+          <button class="btn sm ghost" id="rdTgl">⊞ Redistribuir</button>
+          <div class="rd-pop" id="rdPop">
+            <div class="small" style="font-weight:700">Repartir en cuotas iguales</div>
+            <label class="f">N.° cuotas<input type="number" id="rdN" min="1" max="120" value="12" style="width:100%"></label>
+            <label class="f">Primera cuota<input type="date" id="rdF" value="${addM(1,15)}" style="width:100%"></label>
+            <button class="btn sm pri" id="rdOk">Redistribuir</button>
           </div>
         </div>
-        <div class="tbl-scroll">
-          <table class="ed" id="tblProp">
-            <thead><tr><th>Fecha</th><th>Concepto</th><th class="n">Valor</th><th></th></tr></thead>
-            <tbody id="bodyProp">${rightRows}</tbody>
-            <tfoot>
-              <tr><td colspan="2">Total propuesta</td><td class="n">${fmt(totProp)}</td><td></td></tr>
-              <tr><td colspan="2">Diferencia</td><td class="n" style="color:${Math.abs(dif)<1?'var(--good)':dif>0?'var(--bad)':'var(--good)'}">${Math.abs(dif)<1?'$ 0':fmt(dif)}</td><td></td></tr>
-            </tfoot>
-          </table>
-        </div>
+      </div>
+      <div class="tbl-scroll">
+        <table class="ed">
+          <thead>
+            <tr>
+              <th colspan="3" style="border-right:3px solid var(--acc)">Plan vigente · IngeMAX</th>
+              <th class="uni-sep"></th>
+              <th colspan="3">Tu propuesta <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.7">(editable →)</span></th>
+            </tr>
+            <tr>
+              <th>Fecha</th><th>Concepto</th><th class="n">Valor</th>
+              <th class="uni-sep"></th>
+              <th>Fecha</th><th class="n">Valor</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="bodyProp">${uniRows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" class="muted small">Saldo cuota inicial</td>
+              <td class="n">${fmt(a.saldo)}</td>
+              <td class="uni-sep"></td>
+              <td class="muted small">${excedente>0?'Supera cuota inicial ⚠':'Total propuesta'}</td>
+              <td class="n" style="color:${dif>1?'var(--bad)':excedente>0?'var(--warn)':'var(--good)'}">${fmt(totProp)}</td>
+              <td></td>
+            </tr>
+            ${excedente>0?`<tr>
+              <td colspan="3"></td>
+              <td class="uni-sep"></td>
+              <td class="small" style="color:var(--warn)">Crédito: ${fmtM(n.valor_credito)} → <b>${fmtM(nuevoCred)}</b></td>
+              <td class="n small" style="color:var(--warn)">−${fmt(excedente)}</td>
+              <td></td>
+            </tr>`:''}
+          </tfoot>
+        </table>
       </div>
     </div>
+    ${excedente>0?`<div class="note" style="border-color:var(--warn);background:var(--warn-bg);color:var(--warn)">
+      <b>⚠ La propuesta supera la cuota inicial en ${fmt(excedente)}.</b>
+      Este excedente reduce el crédito hipotecario de <b>${fmtM(n.valor_credito)}</b> a <b>${fmtM(nuevoCred)}</b>.
+      El comprador debe informar a su banco antes de firmar.
+    </div>`:''}
 
     <div class="res-banner ${ev.ajuste<0?'good':ev.ajuste>0?'bad':''}">
       <div class="lbl">${ev.ajuste<0?'Descuento por pagar antes':ev.ajuste>0?'Cargo financiero por aplazar':'Sin ajuste financiero'}</div>
