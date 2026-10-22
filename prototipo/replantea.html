@@ -336,7 +336,11 @@ function analizar(n){
   const base=pend.map(p=>({fecha:p.vencida?CORTE:p.fecha,valor:p.valor}));
   const tieneInt=n.plan_pagos.some(p=>'int_mora'in p);
   let mora=0;
-  if(tieneInt)mora=n.plan_pagos.reduce((s,p)=>s+Math.max(0,(p.int_mora||0)-(p.int_aplicado||0)),0);
+  if(tieneInt)mora=n.plan_pagos.reduce((s,p)=>{
+    const m=p.int_mora||0, a=p.int_aplicado||0;
+    if(a===1)return s;          // int_aplicado=1 → condonada por la constructora
+    return s+Math.max(0,m-a);  // 0=pendiente, >1=parcialmente cobrada
+  },0);
   else{const c=cfgOf(n.proyecto_id);mora=pend.filter(p=>p.vencida).reduce((s,p)=>s+p.valor*c.tasaCliente*Engine.days360(p.fecha,CORTE)/30,0);}
   const fechaLimite=fechaValida(n.fecha_escrituracion_programada)||pactado.map(p=>p.fecha).sort().pop();
   return{pactado,recaudo,pend,base,totPact,totRec,saldo:totPact-totRec,vencido,mora:Math.round(mora),moraReal:tieneInt,fechaLimite};
