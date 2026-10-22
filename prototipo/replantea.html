@@ -89,6 +89,7 @@ input.num{font-family:var(--fn);text-align:right}
 td.uni-sep,th.uni-sep{width:4px;padding:0;background:var(--acc);border-bottom:1px solid color-mix(in srgb,var(--acc) 60%,transparent)}
 td.uni-blank{background:var(--surf2)!important;color:var(--muted);text-align:center;font-size:11px}
 tr.overdue td.uni-blank{background:color-mix(in srgb,var(--bad-bg) 25%,var(--surf2))!important}
+tr.credit-row td{border-top:2px dashed var(--line)!important;background:var(--surf2)!important;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;background:var(--surf2);position:sticky;top:0;z-index:1}
@@ -331,7 +332,11 @@ function analizar(n){
   const totPact=pactado.reduce((s,p)=>s+p.valor,0);
   const totRec=recaudo.reduce((s,r)=>s+r.valor,0);
   const vencido=pend.filter(p=>p.vencida).reduce((s,p)=>s+p.valor,0);
-  const base=pend.map(p=>({fecha:p.vencida?CORTE:p.fecha,valor:p.valor}));
+  const fechaLimite=fechaValida(n.fecha_escrituracion_programada)||pactado.map(p=>p.fecha).sort().pop();
+  const credito=n.valor_credito||0;
+  const fechaCredito=fechaValida(n.fecha_credito)||fechaLimite;
+  // base para el motor: cuota inicial (vencidas→CORTE) + crédito en su fecha original
+  const base=[...pend.map(p=>({fecha:p.vencida?CORTE:p.fecha,valor:p.valor})),...(credito>0?[{fecha:fechaCredito,valor:credito}]:[])];
   const tieneInt=n.plan_pagos.some(p=>'int_mora'in p);
   let mora=0;
   if(tieneInt)mora=n.plan_pagos.reduce((s,p)=>{
@@ -340,8 +345,7 @@ function analizar(n){
     return s+Math.max(0,m-a);  // 0=pendiente, >1=parcialmente cobrada
   },0);
   else{const c=cfgOf(n.proyecto_id);mora=pend.filter(p=>p.vencida).reduce((s,p)=>s+p.valor*c.tasaCliente*Engine.days360(p.fecha,CORTE)/30,0);}
-  const fechaLimite=fechaValida(n.fecha_escrituracion_programada)||pactado.map(p=>p.fecha).sort().pop();
-  return{pactado,recaudo,pend,base,totPact,totRec,saldo:totPact-totRec,vencido,mora:Math.round(mora),moraReal:tieneInt,fechaLimite};
+  return{pactado,recaudo,pend,base,credito,fechaCredito,totPact,totRec,saldo:totPact-totRec,vencido,mora:Math.round(mora),moraReal:tieneInt,fechaLimite};
 }
 
 function calc(s){
@@ -351,7 +355,9 @@ function calc(s){
   const dif=Math.round(a.saldo-totProp);
   const excedente=Math.max(0,-dif);
   const nuevoCred=Math.max(0,n.valor_credito-excedente);
-  const ev=Engine.evaluar({pactado:a.base,recaudo:[],propuesta,cfg:s.cfg,valorVenta:n.valor_venta});
+  // El motor recibe la cuota inicial propuesta + crédito reducido al excedente
+  const propMotor=[...propuesta,...(a.credito>0?[{fecha:a.fechaCredito,valor:nuevoCred}]:[])];
+  const ev=Engine.evaluar({pactado:a.base,recaudo:[],propuesta:propMotor,cfg:s.cfg,valorVenta:n.valor_venta});
   const checks=[
     {ok:dif<=1,t:dif>1?`Faltan ${fmt(dif)} por asignar`:excedente>0?`Supera cuota inicial en ${fmt(excedente)} — crédito pasa de ${fmtM(n.valor_credito)} a ${fmtM(nuevoCred)}`:'La propuesta cubre el saldo'},
     {ok:s.propuesta.every(p=>p.fecha>=CORTE),t:'Ninguna cuota con fecha anterior a hoy'},
@@ -368,7 +374,7 @@ function rebalancear(s){
   if(!libres.length)return;
   const a=analizar(negocio(s.negId));
   const totFijos=s.propuesta.filter(p=>p.fijo).reduce((t,p)=>t+p.valor,0);
-  const saldo=a.saldo-totFijos;
+  const saldo=Math.max(0,a.saldo-totFijos);
   const base=Math.floor(saldo/libres.length);
   for(let i=0;i<libres.length-1;i++)libres[i].valor=base;
   libres[libres.length-1].valor=Math.round(saldo-base*(libres.length-1));
@@ -409,6 +415,15 @@ function renderPropuesta(){
   const propSorted=[...s.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha));
   const maxFut=Math.max(pendFut.length,propSorted.length);
 
+  const creditRow=a.credito>0?`
+    <tr class="credit-row">
+      <td class="mono">${dmy(a.fechaCredito)}</td><td>Crédito hipotecario</td><td class="n">${fmt(a.credito)}</td>
+      <td class="uni-sep"></td>
+      <td class="mono">${dmy(a.fechaCredito)}</td>
+      <td class="n${excedente>0?' warn':''}">${fmt(nuevoCred)}</td>
+      <td style="text-align:center;font-size:11px">${excedente>0?`<span class="warn">−${fmt(excedente)}</span>`:'—'}</td>
+    </tr>`:''
+
   const uniRows=[
     ...pendVenc.map(p=>`
       <tr class="overdue">
@@ -429,7 +444,8 @@ function renderPropuesta(){
           <td style="white-space:nowrap"><button class="lb" data-tog="${R.id}">${R.fijo?'🔒':'🔓'}</button><button class="xb" data-del="${R.id}">×</button></td>`:`
           <td colspan="3" class="uni-blank"></td>`}
       </tr>`;
-    })
+    }),
+    creditRow
   ].join('');
 
   const linkBox=s.estado!=='borrador'?`
