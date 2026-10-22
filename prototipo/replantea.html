@@ -381,13 +381,40 @@ function rebalancear(s){
 }
 
 /* ═══════════════ SOLICITUDES ═══════════════ */
+function initPropuesta(a){
+  const vencidas=a.pend.filter(p=>p.vencida);
+  const futuras=a.pend.filter(p=>!p.vencida);
+  const totalVencido=vencidas.reduce((s,p)=>s+p.valor,0);
+
+  if(totalVencido===0){
+    // Al día: propuesta igual al plan original
+    return futuras.map(p=>({id:nid(),fecha:p.fecha,concepto:p.concepto,valor:p.valor,orig:p.valor,origFecha:p.fecha,fijo:false}));
+  }
+  if(futuras.length===0){
+    // Todo vencido, sin cuotas futuras: pagar todo en CORTE
+    return [{id:nid(),fecha:CORTE,concepto:vencidas[0].concepto,valor:totalVencido,orig:totalVencido,origFecha:CORTE,fijo:true}];
+  }
+  // En mora con cuotas futuras:
+  // la primera cuota futura absorbe todo el saldo vencido en su fecha original
+  // el resto del plan queda en sus fechas y valores originales — sin cuotas nuevas
+  return futuras.map((p,i)=>({
+    id:nid(),
+    fecha:p.fecha,           // fecha original del plan, NO se desplaza
+    concepto:p.concepto,
+    valor:i===0?p.valor+totalVencido:p.valor,
+    orig:p.valor,
+    origFecha:p.fecha,
+    fijo:i===0               // la primera queda fija (es el mínimo para regularizar)
+  }));
+}
+
 function encontrarOCrear(n){
   const abierta=S.solicitudes.find(x=>x.negId===n.id_venta&&!['Cargado en IngeMAX','Rechazado'].includes(x.estado));
   if(abierta)return abierta;
   const a=analizar(n);
   const id='SOL-'+String(1001+S.solicitudes.length);
   const token=Array.from(crypto.getRandomValues(new Uint8Array(9)),b=>b.toString(36).padStart(2,'0')).join('').slice(0,14);
-  const prop=a.pend.map(p=>({id:nid(),fecha:p.vencida?CORTE:p.fecha,concepto:p.concepto,valor:p.valor,orig:p.valor,origFecha:p.fecha,fijo:false}));
+  const prop=initPropuesta(a);
   const sol={id,token,negId:n.id_venta,proyectoId:n.proyecto_id,creada:new Date().toISOString(),estado:'borrador',propuesta:prop,cfg:{...proyecto(n.proyecto_id).cfg}};
   S.solicitudes.unshift(sol);persist();
   return sol;
@@ -597,7 +624,7 @@ function attachEvents(s,a,n){
   });
   // botones toolbar
   const btnReset=$('#btnReset');
-  if(btnReset)btnReset.onclick=()=>{s.propuesta=a.pend.map(p=>({id:nid(),fecha:p.vencida?CORTE:p.fecha,concepto:p.concepto,valor:p.valor,orig:p.valor,origFecha:p.fecha,fijo:false}));persist();renderPropuesta();toast('Plan restablecido');};
+  if(btnReset)btnReset.onclick=()=>{s.propuesta=initPropuesta(a);persist();renderPropuesta();toast('Plan restablecido');};
   const btnAdd=$('#btnAdd');
   if(btnAdd)btnAdd.onclick=()=>{s.propuesta.push({id:nid(),fecha:addM(1,15),concepto:conceptoPrincipal(s.proyectoId),valor:s.cfg.cuotaMin,fijo:false});rebalancear(s);persist();renderPropuesta();};
   // redistribuir
