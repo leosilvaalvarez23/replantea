@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tu plan de pagos · Viviendas y Proyectos</title>
-<link rel="icon" type="image/svg+xml" href="img/icono-vyp.svg">
+<link rel="icon" type="image/svg+xml" href="/app/img/icono-vyp.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -186,18 +186,20 @@ h2{font:700 24px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
 .btn.sec:hover{background:var(--fondo)!important}
 @media print{.barra,.txt-btn,.acc,.toast{display:none!important}body{background:#fff;padding:0}.card,.res{break-inside:avoid}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.res.calc{opacity:.55}
+.vacio{padding:48px 16px;text-align:center;color:#41545D}
 </style>
 </head>
 <body>
 
 <header class="top">
-  <img class="logo" src="img/logo-vyp.svg" alt="Viviendas y Proyectos, bien hechos">
+  <img class="logo" src="/app/img/logo-vyp.svg" alt="Viviendas y Proyectos, bien hechos">
   <div class="inmueble" id="inmueble"></div>
 </header>
 
-<main class="wrap" id="app" aria-live="polite"></main>
+<main class="wrap" id="app" aria-live="polite"><div class="solo"><p class="vacio">Cargando tu propuesta…</p></div></main>
 
-<div class="barra">
+<div class="barra" hidden>
   <div class="dentro">
     <div class="mini" id="mini"></div>
     <button class="btn" id="btnFirmar" type="button">Revisar y firmar</button>
@@ -205,232 +207,110 @@ h2{font:700 24px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
 </div>
 <div class="toast" id="toast" role="status"></div>
 
+<script src="/app/motor.js"></script>
+<script src="/app/api.js"></script>
 <script>
-/* ═══════════ MOTOR (igual al del prototipo y a engine/engine.py) ═══════════ */
-const Engine=(()=>{
-  const parse=s=>{const [y,m,d]=s.split('-').map(Number);return{y,m,d}};
-  const isLastFeb=({y,m,d})=>m===2&&d===new Date(Date.UTC(y,2,0)).getUTCDate();
-  function days360(a,b){const A=parse(a),B=parse(b);let d1=A.d,d2=B.d;
-    if(isLastFeb(A)&&isLastFeb(B))d2=30;if(isLastFeb(A))d1=30;
-    if(d2===31&&d1>=30)d2=30;if(d1===31)d1=30;
-    return(B.y-A.y)*360+(B.m-A.m)*30+(d2-d1)}
-  const daysActual=(a,b)=>(Date.parse(b)-Date.parse(a))/86400000;
-  function timeline(pactado,pagos){const map=new Map();
-    for(const p of pactado){const r=map.get(p.fecha)||{fecha:p.fecha,D:0,F:0};r.D+=p.valor;map.set(p.fecha,r)}
-    for(const p of pagos){const r=map.get(p.fecha)||{fecha:p.fecha,D:0,F:0};r.F+=p.valor;map.set(p.fecha,r)}
-    return[...map.values()].sort((a,b)=>a.fecha.localeCompare(b.fecha))}
-  function liquidacion(pactado,pagos,tasaCia,tasaCliente){
-    const rows=timeline(pactado,pagos);let I=0,J=0,totalH=0;
-    rows.forEach((r,k)=>{let H=0;
-      if(k===0){I=(0<r.F)?0:-r.F;if(I<0)I=0;J=r.D-r.F}
-      else{const prev=rows[k-1],rate=J>=0?tasaCliente:tasaCia;
-        H=rate*(12*days360(prev.fecha,r.fecha)/360)*J;
-        const IH=I+H;let nI,nJ;
-        if(IH<0){nI=(IH+r.D)>=0?0:IH+r.D;nJ=(IH+r.D)>=0?J+(IH+r.D)-r.F:J-r.F}
-        else{nI=IH<r.F?0:IH-r.F;nJ=J+r.D-(IH<r.F?r.F-IH:0)}
-        I=nI;J=nJ}
-      totalH+=H});
-    return{ajuste:totalH}}
-  function vpn(pactado,pagos,tasa){
-    const all=[...pactado,...pagos].map(p=>p.fecha).sort();const t0=all[0],tN=all[all.length-1];
-    const m=f=>daysActual(t0,f)/(365/12);
-    const pv=fl=>fl.reduce((s,p)=>s+p.valor/Math.pow(1+tasa,m(p.fecha)),0);
-    return{ajuste:(pv(pactado)-pv(pagos))*Math.pow(1+tasa,m(tN))}}
-  function evaluar({pactado,recaudo,propuesta,cfg,valorVenta}){
-    const pagos=[...recaudo,...propuesta];let ajuste;
-    if(cfg.metodo==='liquidacion')ajuste=liquidacion(pactado,pagos,cfg.tasaCia,cfg.tasaCliente).ajuste;
-    else ajuste=vpn(pactado,pagos,cfg.tasaVpn).ajuste;
-    ajuste=Math.round(ajuste);
-    const tope=Math.round(valorVenta*cfg.topePct);
-    const topado=ajuste<0&&-ajuste>tope;
-    const aplicado=topado?-tope:ajuste;
-    return{ajuste:aplicado,topado,tope,requiereAprobacion:aplicado<0&&-aplicado>valorVenta*cfg.umbralPct}}
-  return{days360,evaluar}
-})();
-</script>
+/* El cálculo lo hace el servidor: aquí solo se muestra y se edita. Las tasas nunca llegan al navegador. */
+const TOKEN = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '');
+const S = { paso: 'cargando', datos: null, A: null, reglas: null, propuesta: [], inicial: [], res: null, resOk: false, v: 0, errorEval: '', firma: null,
+  f: { acepto: false, paso: 1, enviadoA: '', codigoPrueba: null, code: '', error: '', ocupado: false } };
 
-<script>
-/* ═══════════ UTILIDADES ═══════════ */
-const $=s=>document.querySelector(s);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const num=v=>Math.round(Math.abs(v)).toLocaleString('es-CO');
-const fmt=v=>(v<0?'−$ ':'$ ')+num(v);
-const fmtM=v=>'$ '+(v/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})+' M';
-const iso=d=>d.toISOString().slice(0,10);
-const dmy=s=>s.split('-').reverse().join('/');
-const fLarga=s=>new Date(s+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
-const MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-const mesCorto=s=>{const [y,m]=s.split('-');return`${MESES[Number(m)-1]} ${y}`};
-const parseNum=s=>{const n=Number(String(s).replace(/\./g,'').replace(/[^\d,-]/g,'').replace(',','.'));return isFinite(n)?n:0};
-const now=new Date();
-const CORTE=iso(new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())));
-function addM(k,day){const d=new Date(CORTE+'T00:00:00Z');const t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+k,1));const last=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,0)).getUTCDate();t.setUTCDate(Math.min(day,last));return iso(t)}
-const fechaValida=f=>f&&f>'1900-01-01'?f:null;
-let uid=1;const nid=()=>'r'+(uid++);
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2600)}
+const dmyc = s => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y.slice(2)}`; };
+const adaptar = an => ({ recaudo: an.recaudo, pend: an.pendiente, credito: an.credito, fechaCredito: an.fecha_credito,
+  saldo: an.saldo, vencido: an.vencido, mora: an.mora, totRec: an.pagado, fechaLimite: an.fecha_limite });
+const orden = () => [...S.propuesta].sort((x, y) => x.fecha.localeCompare(y.fecha));
+const items = () => S.propuesta.map(p => ({ fecha: p.fecha, valor: p.valor, concepto: p.concepto, abono: !!p.abono, fijo: !!p.fijo, orig: p.orig ?? null, orig_fecha: p.orig_fecha ?? null }));
+const copia = lista => lista.map(p => ({ ...p, id: nid() }));
 
-/* ═══════════ DATOS DE DEMOSTRACIÓN ═══════════ */
-const CFG={metodo:'liquidacion',tasaCia:0.006,tasaCliente:0.01,tasaVpn:0.008,topePct:0.03,umbralPct:0.015,cuotaMin:1000000,conceptoAbono:'Abono extraordinario'};
-const cuotas=(n,desde,dia,valor,concepto='Cuota inicial',extra=()=>({}))=>Array.from({length:n},(_,i)=>({fecha_pp:addM(desde+i,dia),concepto,valor,...extra(i)}));
-const NEGOCIOS=[
-  {id_venta:1974,inmueble:'T1 - 602',cliente_negocio:'Negocio de demostración (mora)',valor_venta:487500000,valor_credito:341250000,fecha_escrituracion_programada:'1900-01-01',
-    plan_pagos:cuotas(15,-9,28,9750000,'Recursos Propios',i=>({int_mora:i<9?180000:0,int_aplicado:i<5?1:(i===5?0:(i===6?60000:0))})),
-    recaudo:[...Array.from({length:5},(_,i)=>({fecha:addM(-9+i,28),concepto:'Recursos Propios',valor:10000000})),{fecha:addM(-4,28),concepto:'Recursos Propios',valor:10400000}]},
-  {id_venta:2502,inmueble:'T2 - AP-504',cliente_negocio:'Negocio de demostración (al día)',valor_venta:412000000,valor_credito:294000000,fecha_escrituracion_programada:addM(13,20),
-    plan_pagos:[{fecha_pp:addM(-12,5),concepto:'Separacion',valor:10000000},...cuotas(24,-11,5,4500000)],
-    recaudo:[{fecha:addM(-12,5),concepto:'Separacion',valor:10000000},...cuotas(8,-11,6,4500000,'Recursos Propios').map(c=>({fecha:c.fecha_pp,concepto:c.concepto,valor:c.valor}))]}
-];
-const negId=Number(new URLSearchParams(location.search).get('n'))||1974;
-const N=NEGOCIOS.find(n=>n.id_venta===negId)||NEGOCIOS[0];
-N.comprador={nombre:'Comprador de demostración',documento:'1.000.000.000',correo:'comprador@ejemplo.co'};
+/* ═══════════ CÁLCULO LOCAL (solo lo inmediato) Y RESULTADO DEL SERVIDOR ═══════════ */
+// Lo que no necesita el motor se calcula al instante; el resultado financiero lo trae el servidor.
+function c() {
+  const totProp = S.propuesta.reduce((t, p) => t + p.valor, 0), dif = Math.round(S.A.saldo - totProp);
+  const excedente = Math.max(0, -dif), nuevoCred = Math.max(0, S.datos.valor_credito - excedente);
+  const r = S.res || { ajuste: 0, topado: false, tope: 0, requiere_aprobacion: false, errores: [] };
+  let errores = S.resOk ? r.errores : (dif > 1 ? [`Faltan ${fmt(dif)} por asignar a las cuotas.`] : []);
+  if (!S.resOk && S.errorEval) errores = [S.errorEval];
+  return { totProp, dif, excedente, nuevoCred, r, errores, listo: S.resOk && r.valido };
+}
+const tipoDe = r => { const aj = r.ajuste; return { aj, tipo: aj <= -1 ? 'ahorro' : aj >= 1 ? 'sobre' : 'neutro' }; };
 
-/* ═══════════ ANÁLISIS (misma lógica del prototipo) ═══════════ */
-function analizar(n){
-  const pactado=n.plan_pagos.map(p=>({fecha:p.fecha_pp,valor:p.valor,concepto:p.concepto}));
-  const recaudo=n.recaudo.map(r=>({fecha:r.fecha,valor:r.valor,concepto:r.concepto}));
-  let disp=recaudo.reduce((s,r)=>s+r.valor,0);const pend=[];
-  for(const p of[...pactado].sort((a,b)=>a.fecha.localeCompare(b.fecha))){
-    const usado=Math.min(disp,p.valor);disp-=usado;const resto=p.valor-usado;
-    if(resto>0.5)pend.push({...p,valor:resto,vencida:p.fecha<CORTE})}
-  const totPact=pactado.reduce((s,p)=>s+p.valor,0),totRec=recaudo.reduce((s,r)=>s+r.valor,0);
-  const vencido=pend.filter(p=>p.vencida).reduce((s,p)=>s+p.valor,0);
-  const fechaLimite=fechaValida(n.fecha_escrituracion_programada)||pactado.map(p=>p.fecha).sort().pop();
-  const credito=n.valor_credito||0,fechaCredito=fechaValida(n.fecha_credito)||fechaLimite;
-  const base=[...pend.map(p=>({fecha:p.vencida?CORTE:p.fecha,valor:p.valor})),...(credito>0?[{fecha:fechaCredito,valor:credito}]:[])];
-  const mora=n.plan_pagos.reduce((s,p)=>{const m=p.int_mora||0,a=p.int_aplicado||0;if(a===1)return s;return s+Math.max(0,m-a)},0);
-  return{pend,base,credito,fechaCredito,totRec,saldo:totPact-totRec,vencido,mora:Math.round(mora),fechaLimite,recaudo}
+function cambio() {            // la propuesta cambió: se pide el resultado al servidor sin pisar lo que el comprador sigue escribiendo
+  S.v++; S.resOk = false; S.errorEval = '';
+  clearTimeout(S.t); S.t = setTimeout(evaluar, 250);
 }
-function initPropuesta(a){
-  const vencidas=a.pend.filter(p=>p.vencida),futuras=a.pend.filter(p=>!p.vencida);
-  const totalVencido=vencidas.reduce((s,p)=>s+p.valor,0);
-  if(totalVencido===0)return futuras.map(p=>({id:nid(),fecha:p.fecha,concepto:p.concepto,valor:p.valor,orig:p.valor,origFecha:p.fecha,fijo:false}));
-  if(futuras.length===0)return[{id:nid(),fecha:CORTE,concepto:vencidas[0].concepto,valor:totalVencido,orig:totalVencido,origFecha:CORTE,fijo:true}];
-  return futuras.map((p,i)=>({id:nid(),fecha:p.fecha,concepto:p.concepto,valor:i===0?p.valor+totalVencido:p.valor,orig:p.valor,origFecha:p.fecha,fijo:i===0}));
+async function evaluar() {
+  const v = S.v;
+  try { const r = await API.post(`/comprador/${TOKEN}/evaluar`, { propuesta: items() }); if (v !== S.v) return; S.res = r; S.resOk = true; S.errorEval = ''; }
+  catch (e) { if (v !== S.v) return; if ([404, 409, 410].includes(e.status)) return errorDeLink(e); S.resOk = false; S.errorEval = e.message; }
+  if (S.paso === 'simular') renderSim();
 }
-function rebalancear(s,a){
-  const libres=s.propuesta.filter(p=>!p.fijo).sort((x,y)=>x.fecha.localeCompare(y.fecha));
-  if(!libres.length)return;
-  const totFijos=s.propuesta.filter(p=>p.fijo).reduce((t,p)=>t+p.valor,0);
-  const saldo=Math.max(0,a.saldo-totFijos),base=Math.floor(saldo/libres.length);
-  for(let i=0;i<libres.length-1;i++)libres[i].valor=base;
-  libres[libres.length-1].valor=Math.round(saldo-base*(libres.length-1));
-}
-function calc(s,a){
-  const propuesta=s.propuesta.map(p=>({fecha:p.fecha,valor:p.valor}));
-  const totProp=propuesta.reduce((t,p)=>t+p.valor,0);
-  const dif=Math.round(a.saldo-totProp),excedente=Math.max(0,-dif);
-  const nuevoCred=Math.max(0,N.valor_credito-excedente);
-  const propMotor=[...propuesta,...(a.credito>0?[{fecha:a.fechaCredito,valor:nuevoCred}]:[])];
-  const ev=Engine.evaluar({pactado:a.base,recaudo:[],propuesta:propMotor,cfg:CFG,valorVenta:N.valor_venta});
-  const errores=[];
-  if(dif>1)errores.push(`Faltan ${fmt(dif)} por asignar a las cuotas.`);
-  if(s.propuesta.some(p=>p.fecha<CORTE))errores.push('Hay cuotas con fecha anterior a hoy.');
-  if(s.propuesta.some(p=>p.fecha>a.fechaLimite))errores.push(`Todas las cuotas deben quedar antes del ${fLarga(a.fechaLimite)}.`);
-  if(s.propuesta.some(p=>!p.abono&&p.valor>0&&p.valor<CFG.cuotaMin))errores.push(`Cada cuota debe ser de al menos ${fmt(CFG.cuotaMin)}, salvo los abonos.`);
-  if(s.propuesta.some(p=>!(p.valor>0)))errores.push('Hay cuotas en cero. Elimínalas o asígnales un valor.');
-  return{totProp,dif,excedente,nuevoCred,ev,errores}
+function rebalancear() {
+  const libres = S.propuesta.filter(p => !p.fijo).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  if (!libres.length) return;
+  const totFijos = S.propuesta.filter(p => p.fijo).reduce((t, p) => t + p.valor, 0);
+  const saldo = Math.max(0, S.A.saldo - totFijos), base = Math.floor(saldo / libres.length);
+  for (let i = 0; i < libres.length - 1; i++) libres[i].valor = base;
+  libres[libres.length - 1].valor = Math.round(saldo - base * (libres.length - 1));
 }
 
-/* ═══════════ ESTADO ═══════════ */
-const A=analizar(N);
-const S={propuesta:initPropuesta(A)};
-const orden=()=>[...S.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha));
+/* ═══════════ NAVEGACIÓN ═══════════ */
+function setBar(html, tipo, texto, disabled, fn) {
+  $('.barra').hidden = false; const m = $('#mini'); m.dataset.t = tipo || ''; m.innerHTML = html;
+  const b = $('#btnFirmar'); b.textContent = texto; b.disabled = !!disabled; S.onBar = fn;
+}
+function ir(p) { S.paso = p; render(); window.scrollTo(0, 0); }
+function render() { ({ simular: renderSim, revisar: renderRev, firma: renderFirma, listo: renderListo })[S.paso](); }
+function cabecera() { $('#inmueble').innerHTML = `<b>${esc(S.datos.inmueble)}</b><span>Valor de venta ${fmtM(S.datos.valor_venta)}</span>`; }
+const resumenBarra = tipo => tipo === 'ahorro' ? 'Ahorras' : tipo === 'sobre' ? 'Pagas de más' : 'Sin cambio en el valor';
 
-/* ═══════════ LÍNEA DE PAGOS ═══════════ */
-function lineaSVG(a,s){
-  const buckets=new Map();
-  const get=k=>{if(!buckets.has(k))buckets.set(k,{pag:0,act:0,pro:0,venc:false});return buckets.get(k)};
-  a.recaudo.forEach(r=>get(r.fecha.slice(0,7)).pag+=r.valor);
-  a.pend.forEach(p=>{const b=get(p.fecha.slice(0,7));b.act+=p.valor;if(p.vencida)b.venc=true});
-  s.propuesta.forEach(p=>get(p.fecha.slice(0,7)).pro+=p.valor);
-  get(CORTE.slice(0,7));
-  const keys=[...buckets.keys()].sort();
-  // llena meses vacíos para que el eje sea proporcional al tiempo
-  const full=[];let [y,m]=keys[0].split('-').map(Number);const [yE,mE]=keys[keys.length-1].split('-').map(Number);
-  while(y<yE||(y===yE&&m<=mE)){full.push(`${y}-${String(m).padStart(2,'0')}`);m++;if(m>12){m=1;y++}}
-  const cred=a.credito>0;
-  const W=360,H=190,base=152,top=16,padX=4,alto=base-top;
-  const slots=full.length+(cred?2:0);
-  const step=(W-2*padX)/slots,bw=Math.max(3,Math.min(18,step*.68));
-  const topes=[...buckets.values()].flatMap(b=>[b.act,b.pro]);
-  const max=Math.max(...topes,1);
-  const hh=v=>Math.min(alto,v/max*alto);
-  const cx=i=>padX+step*i+step/2;
-  let g='';
-  full.forEach((k,i)=>{const b=buckets.get(k);if(!b)return;const x=cx(i)-bw/2;
-    if(b.pag>0){const h=hh(b.pag);g+=`<rect x="${x}" y="${base-h}" width="${bw}" height="${h}" rx="1.5" fill="var(--pagado)"/>`}
-    if(b.pro>0){const h=hh(b.pro);g+=`<rect x="${x}" y="${base-h}" width="${bw}" height="${h}" rx="1.5" fill="var(--propuesta)"/>`}
-    if(b.act>0){const h=hh(b.act);g+=`<rect x="${x-1.5}" y="${base-h-1.5}" width="${bw+3}" height="${h+1.5}" rx="2" fill="none" stroke="${b.venc?'var(--sobre)':'var(--tinta)'}" stroke-width="2" stroke-dasharray="4 3"/>`}
-  });
-  // crédito: columna aparte al final, recortada a la altura del gráfico (marca de corte)
-  let xCred=0;
-  if(cred){const w=bw*1.7;xCred=cx(slots-1);const x=xCred-w/2;
-    g+=`<rect x="${x}" y="${top}" width="${w}" height="${alto}" rx="2" fill="var(--credito)"/>
-        <path d="M${x-1} ${top+alto*.55}l${w+2} -7M${x-1} ${top+alto*.55+7}l${w+2} -7" stroke="var(--papel)" stroke-width="3"/>`}
-  const iHoy=full.indexOf(CORTE.slice(0,7)),dia=Number(CORTE.slice(8,10));
-  const xHoy=padX+step*(iHoy+Math.min(dia,30)/30);
-  const anclaHoy=xHoy>W-34?'end':xHoy<34?'start':'middle';
-  const finCuotas=padX+step*full.length;
-  const marcas=[0,full.length-1].filter((v,i,ar)=>ar.indexOf(v)===i);
-  const eje=marcas.map((i,j)=>`<text x="${j===0?padX:finCuotas}" y="${base+22}" font-size="13" fill="#52646C" text-anchor="${j===0?'start':'end'}">${mesCorto(full[i])}</text>`).join('')
-    +(cred?`<text x="${W-padX}" y="${top-6}" font-size="13" font-weight="600" fill="var(--credito)" text-anchor="end">Crédito</text>`:'');
-  const resumen=`Línea de pagos de ${mesCorto(full[0])} a ${mesCorto(full[full.length-1])}. Barras grises: pagado. Contorno punteado: plan actual. Barras azules: tu propuesta.${cred?' La barra final es el crédito hipotecario.':''}`;
-  return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(resumen)}">
-    <line x1="${padX}" x2="${W-padX}" y1="${base}" y2="${base}" stroke="var(--linea)" stroke-width="1.5"/>
-    ${g}
-    <line x1="${xHoy}" x2="${xHoy}" y1="${top-4}" y2="${base+4}" stroke="var(--tinta)" stroke-width="1.5"/>
-    <text x="${xHoy}" y="${top-6}" font-size="13" font-weight="600" fill="var(--tinta)" text-anchor="${anclaHoy}">Hoy</text>
-    ${eje}</svg>`
+function errorDeLink(e) {
+  $('.barra').hidden = true;
+  const msg = e.status === 410 ? 'Este link venció. Pídele a tu asesor uno nuevo.'
+    : e.status === 404 ? 'Este link no existe. Revisa que lo hayas copiado completo o pídele a tu asesor uno nuevo.'
+    : e.status === 409 ? 'Esta propuesta ya fue firmada.' : e.message;
+  $('#app').innerHTML = `<div class="solo"><section class="card ok"><h1 class="titulo">${e.status === 409 ? 'Propuesta firmada' : 'No pudimos abrir tu propuesta'}</h1><p>${esc(msg)}</p></section></div>`;
 }
 
-/* ═══════════ RENDER ═══════════ */
-function renderSim(){
-  const a=A,s=S,c=calc(s,a);
-  const aj=c.ev.ajuste,tipo=aj<=-1?'ahorro':aj>=1?'sobre':'neutro';
-  const frase=tipo==='ahorro'?'Con esta propuesta ahorras':tipo==='sobre'?'Con esta propuesta pagas de más':'Esta propuesta no cambia el valor de tu plan';
-  const cifra=tipo==='neutro'?'$ 0':fmt(Math.abs(aj));
-  const nota=c.ev.topado?`El descuento se limita al tope del proyecto (${fmt(c.ev.tope)}).`
-    :tipo==='ahorro'?'Es el descuento por adelantar pagos frente a tu plan actual.'
-    :tipo==='sobre'?'Es el cargo financiero por aplazar pagos frente a tu plan actual.':'Mueve fechas o valores para ver el efecto.';
-
-  const hayAbonos=S.propuesta.some(p=>p.abono),cols=hayAbonos?3:2;
-  const filas=orden().map(p=>`<tr data-id="${p.id}">
-      <td><input aria-label="${p.abono?'Fecha del abono':'Fecha de la cuota'}" id="f-${p.id}" type="date" value="${p.fecha}" min="${CORTE}" max="${a.fechaLimite}" data-k="fecha"></td>
+/* ═══════════ 1. SIMULADOR ═══════════ */
+function renderSim() {
+  const a = S.A, k = c(), { aj, tipo } = tipoDe(k.r);
+  const frase = tipo === 'ahorro' ? 'Con esta propuesta ahorras' : tipo === 'sobre' ? 'Con esta propuesta pagas de más' : 'Esta propuesta no cambia el valor de tu plan';
+  const nota = k.r.topado ? `El descuento se limita al tope del proyecto (${fmt(k.r.tope)}).`
+    : tipo === 'ahorro' ? 'Es el descuento por adelantar pagos frente a tu plan actual.'
+    : tipo === 'sobre' ? 'Es el cargo financiero por aplazar pagos frente a tu plan actual.' : 'Mueve fechas o valores para ver el efecto.';
+  const hayAbonos = S.propuesta.some(p => p.abono), cols = hayAbonos ? 3 : 2;
+  const min = S.reglas.hoy, max = a.fechaLimite || '';
+  const filas = orden().map(p => `<tr data-id="${p.id}">
+      <td><input aria-label="${p.abono ? 'Fecha del abono' : 'Fecha de la cuota'}" id="f-${p.id}" type="date" value="${p.fecha}" min="${min}" ${max ? `max="${max}"` : ''} data-k="fecha"></td>
       <td class="der"><input aria-label="Valor" id="v-${p.id}" inputmode="numeric" value="${num(p.valor)}" data-k="valor"></td>
-      ${hayAbonos?`<td class="x">${p.abono?`<button class="txt-btn" data-del="${p.id}" type="button" aria-label="Quitar abono">✕</button>`:''}</td>`:''}</tr>`).join('');
-  const credCambia=c.excedente>0&&a.credito>0;
-  const filaCred=a.credito>0?`<tr class="fijo"><td>Crédito hipotecario<small>${dmy(a.fechaCredito)}</small></td>
-      <td class="der cifra-t" colspan="${cols-1}">${credCambia?`<small><del>${fmt(N.valor_credito)}</del></small>`:''}${fmt(c.nuevoCred)}</td></tr>`:'';
+      ${hayAbonos ? `<td class="x">${p.abono ? `<button class="txt-btn" data-del="${p.id}" type="button" aria-label="Quitar abono">✕</button>` : ''}</td>` : ''}</tr>`).join('');
+  const credCambia = k.excedente > 0 && a.credito > 0;
+  const filaCred = a.credito > 0 ? `<tr class="fijo"><td>Crédito hipotecario<small>${dmy(a.fechaCredito)}</small></td>
+      <td class="der cifra-t" colspan="${cols - 1}">${credCambia ? `<small><del>${fmt(S.datos.valor_credito)}</del></small>` : ''}${fmt(k.nuevoCred)}</td></tr>` : '';
+  const moraHTML = a.mora > 0 || a.vencido > 0 ? `<div class="aviso mora">
+      ${a.vencido > 0 ? `<p><b>Tienes ${fmt(a.vencido)} vencidos.</b> Se pagan en tu primera cuota, por eso su valor es mayor.</p>` : ''}
+      ${a.mora > 0 ? `<p>Mora causada: <b>${fmt(a.mora)}</b>. La liquida IngeMAX y se cobra aparte; no se suma otra vez al cálculo.</p>` : ''}</div>` : '';
+  const credHTML = k.excedente > 0 ? `<div class="aviso cred"><p><b>Tu propuesta supera la cuota inicial en ${fmt(k.excedente)}.</b></p>
+      <p>Ese valor se abona al crédito: pasa de ${fmt(S.datos.valor_credito)} a ${fmt(k.nuevoCred)}. Debes informar el cambio a tu banco.</p></div>` : '';
+  const errHTML = k.errores.length ? `<div class="aviso err" role="alert"><p><b>Para continuar</b></p><ul>${k.errores.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>` : '';
 
-  const moraHTML=a.mora>0||a.vencido>0?`<div class="aviso mora">
-      ${a.vencido>0?`<p><b>Tienes ${fmt(a.vencido)} vencidos.</b> Se pagan en tu primera cuota, por eso su valor es mayor.</p>`:''}
-      ${a.mora>0?`<p>Mora causada: <b>${fmt(a.mora)}</b>. La liquida IngeMAX y se cobra aparte; no se suma otra vez al cálculo.</p>`:''}
-    </div>`:'';
-  const credHTML=c.excedente>0?`<div class="aviso cred">
-      <p><b>Tu propuesta supera la cuota inicial en ${fmt(c.excedente)}.</b></p>
-      <p>Ese valor se abona al crédito: pasa de ${fmt(N.valor_credito)} a ${fmt(c.nuevoCred)}. Debes informar el cambio a tu banco.</p></div>`:'';
-  const errHTML=c.errores.length?`<div class="aviso err" role="alert"><p><b>Para continuar</b></p><ul>${c.errores.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`:'';
-
-  // conserva el foco al re-renderizar
-  const act=document.activeElement,foco=act&&act.id;
-  $('#inmueble').innerHTML=`<b>${esc(N.inmueble)}</b><span>Valor de venta ${fmtM(N.valor_venta)}</span>`;
-  $('#app').innerHTML=`
+  const act = document.activeElement, foco = act && act.id;       // conserva el foco al volver a dibujar
+  cabecera();
+  $('#app').innerHTML = `
   <div class="izq">
-    <section class="res" data-t="${tipo}" aria-label="Resultado">
-      <p class="frase">${frase}</p>
-      <p class="cifra">${cifra}</p>
-      <p class="nota">${nota}</p>
+    <section class="res ${S.resOk ? '' : 'calc'}" data-t="${tipo}" aria-label="Resultado" ${S.resOk ? '' : 'aria-busy="true"'}>
+      <p class="frase">${frase}</p><p class="cifra">${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</p><p class="nota">${nota}</p>
     </section>
     <section class="card linea" aria-label="Línea de pagos">
-      ${lineaSVG(a,s)}
-      <ul class="leyenda"><li><span class="sw pag"></span>Pagado</li><li><span class="sw act"></span>Plan actual</li><li><span class="sw pro"></span>Tu propuesta</li>${a.credito>0?'<li><span class="sw cre"></span>Crédito (recortado)</li>':''}</ul>
+      ${lineaSVG(a, { propuesta: S.propuesta })}
+      <ul class="leyenda"><li><span class="sw pag"></span>Pagado</li><li><span class="sw act"></span>Plan actual</li><li><span class="sw pro"></span>Tu propuesta</li>${a.credito > 0 ? '<li><span class="sw cre"></span>Crédito (recortado)</li>' : ''}</ul>
     </section>
     <section class="card" aria-label="Resumen">
       <dl class="cifras">
         <div class="pagado"><dt>Ya pagaste</dt><dd>${fmt(a.totRec)}</dd></div>
         <div><dt>Te falta de la cuota inicial</dt><dd>${fmt(a.saldo)}</dd></div>
-        <div class="total"><dt>Tu propuesta suma</dt><dd>${fmt(c.totProp)}</dd></div>
-        ${a.credito>0?`<div><dt>Crédito hipotecario</dt><dd>${credCambia?`<small style="font-weight:400;font-size:13px;color:#52646C"><del>${fmt(N.valor_credito)}</del></small> `:''}${fmt(c.nuevoCred)}</dd></div>`:''}
+        <div class="total"><dt>Tu propuesta suma</dt><dd>${fmt(k.totProp)}</dd></div>
+        ${a.credito > 0 ? `<div><dt>Crédito hipotecario</dt><dd>${credCambia ? `<small style="font-weight:400;font-size:13px;color:#52646C"><del>${fmt(S.datos.valor_credito)}</del></small> ` : ''}${fmt(k.nuevoCred)}</dd></div>` : ''}
       </dl>
     </section>
   </div>
@@ -440,143 +320,165 @@ function renderSim(){
       <div class="cab-cuotas"><h2>Tus cuotas</h2>
         <div class="acciones"><button class="txt-btn" id="btnAbono" type="button">Agregar abono</button><button class="txt-btn" id="btnReset" type="button">Restablecer</button></div></div>
       <table class="tabla">
-        <thead><tr><th scope="col">Fecha</th><th scope="col" class="der">Valor</th>${hayAbonos?'<th scope="col"><span class="sr">Acciones</span></th>':''}</tr></thead>
+        <thead><tr><th scope="col">Fecha</th><th scope="col" class="der">Valor</th>${hayAbonos ? '<th scope="col"><span class="sr">Acciones</span></th>' : ''}</tr></thead>
         <tbody>${filas}${filaCred}</tbody>
-        <tfoot><tr><td>Total por pagar</td><td class="der cifra-t" colspan="${cols-1}">${fmt(c.totProp+c.nuevoCred)}</td></tr></tfoot>
+        <tfoot><tr><td>Total por pagar</td><td class="der cifra-t" colspan="${cols - 1}">${fmt(k.totProp + k.nuevoCred)}</td></tr></tfoot>
       </table>
     </section>
     ${errHTML}
   </div>`;
-  setBar(`<small>${tipo==='ahorro'?'Ahorras':tipo==='sobre'?'Pagas de más':'Sin cambio en el valor'}</small><strong>${tipo==='neutro'?'$ 0':fmt(Math.abs(aj))}</strong>`,tipo,'Revisar y firmar',c.errores.length>0,()=>ir('revisar'));
-  if(foco){const el=document.getElementById(foco);if(el)el.focus()}
+  setBar(`<small>${resumenBarra(tipo)}</small><strong>${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</strong>`, tipo, 'Revisar y firmar', !k.listo, () => ir('revisar'));
+  if (foco) { const el = document.getElementById(foco); if (el) el.focus(); }
 }
 
-/* ═══════════ EVENTOS ═══════════ */
-$('#app').addEventListener('change',e=>{
-  const row=e.target.closest('tr[data-id]');if(!row)return;
-  const p=S.propuesta.find(x=>x.id===row.dataset.id);if(!p)return;
-  if(e.target.dataset.k==='fecha'&&e.target.value)p.fecha=e.target.value;
-  if(e.target.dataset.k==='valor'){p.valor=parseNum(e.target.value);p.fijo=true;rebalancear(S,A)}
-  render();
-});
-$('#app').addEventListener('click',e=>{
-  if(e.target.id==='btnReset'){S.propuesta=initPropuesta(A);render();toast('Plan restablecido');return}
-  if(e.target.id==='btnAbono'){S.propuesta.push({id:nid(),fecha:addM(1,15)>A.fechaLimite?CORTE:addM(1,15),concepto:CFG.conceptoAbono,valor:CFG.cuotaMin,fijo:true,abono:true});rebalancear(S,A);render();return}
-  if(e.target.dataset.del){S.propuesta=S.propuesta.filter(p=>p.id!==e.target.dataset.del);rebalancear(S,A);render()}
-});
-/* ═══════════ PASOS: REVISIÓN → FIRMA → CONFIRMACIÓN ═══════════ */
-S.paso='simular';S.f={acepto:false,paso:1,otp:null,code:'',error:''};
-const dmyc=s=>{const [y,m,d]=s.split('-');return`${d}/${m}/${y.slice(2)}`};
-const tipoDe=c=>{const aj=c.ev.ajuste;return{aj,tipo:aj<=-1?'ahorro':aj>=1?'sobre':'neutro'}};
-const heroHTML=(c)=>{const {aj,tipo}=tipoDe(c);
-  const frase=tipo==='ahorro'?'Con esta propuesta ahorras':tipo==='sobre'?'Con esta propuesta pagas de más':'Esta propuesta no cambia el valor de tu plan';
-  return`<section class="res" data-t="${tipo}" aria-label="Resultado"><p class="frase">${frase}</p><p class="cifra">${tipo==='neutro'?'$ 0':fmt(Math.abs(aj))}</p></section>`};
-function setBar(html,tipo,texto,disabled,fn){
-  $('.barra').hidden=false;const m=$('#mini');m.dataset.t=tipo||'';m.innerHTML=html;
-  const b=$('#btnFirmar');b.textContent=texto;b.disabled=!!disabled;S.onBar=fn}
-function ir(p){S.paso=p;render();window.scrollTo(0,0)}
-function render(){({simular:renderSim,revisar:renderRev,firma:renderFirma,listo:renderListo})[S.paso]()}
-const maskMail=m=>m.replace(/^(.).*(@.*)$/,'$1•••$2');
-
-function renderRev(){
-  const a=A,c=calc(S,a),{aj,tipo}=tipoDe(c);
-  const izq=[...a.pend].sort((x,y)=>x.fecha.localeCompare(y.fecha)),der=orden(),v=izq.filter(p=>p.vencida).length;
-  const n=Math.max(izq.length,v+der.length);let filas='';
-  for(let i=0;i<n;i++){const l=izq[i],r=i>=v?der[i-v]:null;
-    filas+=`<tr><td${l&&l.vencida?' class="venc"':''}>${l?dmyc(l.fecha):''}</td><td class="der${l&&l.vencida?' venc':''}">${l?num(l.valor):''}</td>
-      <td class="lado">${r?dmyc(r.fecha):''}</td><td class="der">${r?num(r.valor):''}</td></tr>`}
-  const cred=a.credito>0?`<tr class="sep"><td>Crédito</td><td class="der">${num(a.credito)}</td><td class="lado">Crédito</td><td class="der">${num(c.nuevoCred)}</td></tr>`:'';
-  const avisos=[
-    a.vencido>0?`<div class="aviso mora"><p><b>Tus ${fmt(a.vencido)} vencidos</b> se pagan en la primera cuota de tu propuesta.</p>${a.mora>0?`<p>La mora causada (${fmt(a.mora)}) la liquida IngeMAX por separado.</p>`:''}</div>`:'',
-    c.excedente>0?`<div class="aviso cred"><p><b>Tu crédito hipotecario pasa de ${fmt(N.valor_credito)} a ${fmt(c.nuevoCred)}.</b></p><p>Debes informar este cambio a tu banco.</p></div>`:'',
-    c.ev.requiereAprobacion?`<div class="aviso cred"><p><b>Gerencia debe aprobar tu propuesta.</b> Por el valor del descuento, la aprobación es previa a que se cargue el nuevo plan.</p></div>`:''
-  ].join('');
-  $('#inmueble').innerHTML=`<b>${esc(N.inmueble)}</b><span>Valor de venta ${fmtM(N.valor_venta)}</span>`;
-  $('#app').innerHTML=`<div class="solo">
+/* ═══════════ 2. REVISIÓN ═══════════ */
+function renderRev() {
+  const a = S.A, k = c(), { aj, tipo } = tipoDe(k.r);
+  const izq = [...a.pend].sort((x, y) => x.fecha.localeCompare(y.fecha)), der = orden(), v = izq.filter(p => p.vencida).length;
+  const n = Math.max(izq.length, v + der.length); let filas = '';
+  for (let i = 0; i < n; i++) {
+    const l = izq[i], r = i >= v ? der[i - v] : null;
+    filas += `<tr><td${l && l.vencida ? ' class="venc"' : ''}>${l ? dmyc(l.fecha) : ''}</td><td class="der${l && l.vencida ? ' venc' : ''}">${l ? num(l.valor) : ''}</td>
+      <td class="lado">${r ? dmyc(r.fecha) : ''}</td><td class="der">${r ? num(r.valor) : ''}</td></tr>`;
+  }
+  const cred = a.credito > 0 ? `<tr class="sep"><td>Crédito</td><td class="der">${num(a.credito)}</td><td class="lado">Crédito</td><td class="der">${num(k.nuevoCred)}</td></tr>` : '';
+  const avisos = [
+    a.vencido > 0 ? `<div class="aviso mora"><p><b>Tus ${fmt(a.vencido)} vencidos</b> se pagan en la primera cuota de tu propuesta.</p>${a.mora > 0 ? `<p>La mora causada (${fmt(a.mora)}) la liquida IngeMAX por separado.</p>` : ''}</div>` : '',
+    k.excedente > 0 ? `<div class="aviso cred"><p><b>Tu crédito hipotecario pasa de ${fmt(S.datos.valor_credito)} a ${fmt(k.nuevoCred)}.</b></p><p>Debes informar este cambio a tu banco.</p></div>` : '',
+    k.r.requiere_aprobacion ? `<div class="aviso cred"><p><b>Gerencia debe aprobar tu propuesta.</b> Por el valor del descuento, la aprobación es previa a que se cargue el nuevo plan.</p></div>` : ''].join('');
+  cabecera();
+  $('#app').innerHTML = `<div class="solo">
     <h1 class="titulo">Revisa tu propuesta</h1>
-    ${heroHTML(c)}
+    <section class="res" data-t="${tipo}" aria-label="Resultado"><p class="frase">${tipo === 'ahorro' ? 'Con esta propuesta ahorras' : tipo === 'sobre' ? 'Con esta propuesta pagas de más' : 'Esta propuesta no cambia el valor de tu plan'}</p><p class="cifra">${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</p></section>
     <section class="card ajustada" aria-label="Comparación">
       <table class="tabla comp">
         <colgroup><col style="width:19%"><col style="width:31%"><col style="width:19%"><col style="width:31%"></colgroup>
         <thead><tr><th colspan="2" scope="colgroup">Plan actual</th><th colspan="2" scope="colgroup" class="lado">Tu propuesta</th></tr>
           <tr class="sub"><th>Fecha</th><th class="der">Valor</th><th class="lado">Fecha</th><th class="der">Valor</th></tr></thead>
         <tbody>${filas}${cred}</tbody>
-        <tfoot><tr><td>Total</td><td class="der">${num(a.saldo+a.credito)}</td><td class="lado">Total</td><td class="der">${num(c.totProp+c.nuevoCred)}</td></tr></tfoot>
+        <tfoot><tr><td>Total</td><td class="der">${num(a.saldo + a.credito)}</td><td class="lado">Total</td><td class="der">${num(k.totProp + k.nuevoCred)}</td></tr></tfoot>
       </table>
-      ${a.vencido>0?'<p class="sub-t">En rojo, las cuotas vencidas: se pagan en la primera cuota de tu propuesta.</p>':''}
+      ${a.vencido > 0 ? '<p class="sub-t">En rojo, las cuotas vencidas: se pagan en la primera cuota de tu propuesta.</p>' : ''}
     </section>
     ${avisos}
     <p><button class="txt-btn" data-act="editar" type="button">Volver a editar</button></p>
   </div>`;
-  setBar(`<small>${tipo==='ahorro'?'Ahorras':tipo==='sobre'?'Pagas de más':'Sin cambio'}</small><strong>${tipo==='neutro'?'$ 0':fmt(Math.abs(aj))}</strong>`,tipo,'Continuar a firmar',false,()=>{S.f={acepto:false,paso:1,otp:null,code:'',error:''};ir('firma')});
+  setBar(`<small>${resumenBarra(tipo)}</small><strong>${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</strong>`, tipo, 'Continuar a firmar', false,
+    () => { S.f = { acepto: false, paso: 1, enviadoA: '', codigoPrueba: null, code: '', error: '', ocupado: false }; ir('firma'); });
 }
 
-function renderFirma(){
-  const f=S.f,P=N.comprador;
-  const pasos=`<ol class="pasos"><li class="${f.paso>1?'hecho':''}" ${f.paso===1?'aria-current="step"':''}>1. Aceptar</li><li ${f.paso===2?'aria-current="step"':''}>2. Código</li></ol>`;
-  const cuerpo=f.paso===1?`
+/* ═══════════ 3. FIRMA ═══════════ */
+function renderFirma() {
+  const f = S.f, P = S.datos.comprador;
+  const pasos = `<ol class="pasos"><li class="${f.paso > 1 ? 'hecho' : ''}" ${f.paso === 1 ? 'aria-current="step"' : ''}>1. Aceptar</li><li ${f.paso === 2 ? 'aria-current="step"' : ''}>2. Código</li></ol>`;
+  const err = f.error ? `<div class="aviso err" role="alert"><p>${esc(f.error)}</p></div>` : '';
+  const cuerpo = f.paso === 1 ? `
     <dl class="datos"><div><dt>Firmante</dt><dd>${esc(P.nombre)}</dd></div><div><dt>Documento</dt><dd>${esc(P.documento)}</dd></div><div><dt>Correo</dt><dd>${esc(P.correo)}</dd></div></dl>
-    <label class="check"><input type="checkbox" id="acepto" ${f.acepto?'checked':''}><span>Acepto firmar electrónicamente esta propuesta de plan de pagos y autorizo el tratamiento de mis datos personales para este trámite.</span></label>
-    <p class="legal">La firma electrónica tiene validez legal según la Ley 527 de 1999 y el Decreto 2364 de 2012. Tus datos se tratan conforme a la Ley 1581 de 2012.</p>`
-  :`<p>Enviamos un código de 6 dígitos a <b>${esc(maskMail(P.correo))}</b>. Escríbelo para firmar.</p>
+    <label class="check"><input type="checkbox" id="acepto" ${f.acepto ? 'checked' : ''}><span>Acepto firmar electrónicamente esta propuesta de plan de pagos y autorizo el tratamiento de mis datos personales para este trámite.</span></label>
+    <p class="legal">La firma electrónica tiene validez legal según la Ley 527 de 1999 y el Decreto 2364 de 2012. Tus datos se tratan conforme a la Ley 1581 de 2012.</p>${err}`
+  : `<p>Enviamos un código de 6 dígitos a <b>${esc(f.enviadoA)}</b>. Escríbelo para firmar.</p>
     <div class="campo-otp"><label for="otp">Código de verificación</label>
       <input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="${esc(f.code)}"></div>
-    ${f.error?`<div class="aviso err" role="alert"><p>${esc(f.error)}</p></div>`:''}
-    <div class="aviso cred"><p><b>Ambiente de pruebas:</b> el correo no se envía. Tu código es <b>${f.otp}</b>.</p></div>
-    <p><button class="txt-btn" data-act="reenviar" type="button">Enviar un código nuevo</button></p>`;
-  $('#inmueble').innerHTML=`<b>${esc(N.inmueble)}</b><span>Valor de venta ${fmtM(N.valor_venta)}</span>`;
-  $('#app').innerHTML=`<div class="solo"><h1 class="titulo">Firma tu propuesta</h1>${pasos}<section class="card firma">${cuerpo}</section>
-    <p><button class="txt-btn" data-act="${f.paso===1?'revisar':'paso1'}" type="button">${f.paso===1?'Volver a la revisión':'Volver al paso 1'}</button></p></div>`;
-  if(f.paso===1)setBar('<small>Siguiente</small><strong>Código</strong>','','Enviar código',!f.acepto,()=>{f.otp=String(Math.floor(100000+Math.random()*900000));f.paso=2;f.code='';f.error='';render();window.scrollTo(0,0)});
-  else setBar('<small>Último paso</small><strong>Firma</strong>','','Firmar propuesta',f.code.length!==6,firmar);
+    ${err}
+    ${f.codigoPrueba ? `<div class="aviso cred"><p><b>Ambiente de pruebas:</b> el correo no se envía. Tu código es <b>${esc(f.codigoPrueba)}</b>.</p></div>` : ''}
+    <p><button class="txt-btn" data-act="reenviar" type="button" ${f.ocupado ? 'disabled' : ''}>Enviar un código nuevo</button></p>`;
+  cabecera();
+  $('#app').innerHTML = `<div class="solo"><h1 class="titulo">Firma tu propuesta</h1>${pasos}<section class="card firma">${cuerpo}</section>
+    <p><button class="txt-btn" data-act="${f.paso === 1 ? 'revisar' : 'paso1'}" type="button">${f.paso === 1 ? 'Volver a la revisión' : 'Volver al paso 1'}</button></p></div>`;
+  if (f.paso === 1) setBar('<small>Siguiente</small><strong>Código</strong>', '', f.ocupado ? 'Enviando…' : 'Enviar código', !f.acepto || f.ocupado, pedirCodigo);
+  else setBar('<small>Último paso</small><strong>Firma</strong>', '', f.ocupado ? 'Firmando…' : 'Firmar propuesta', f.code.length !== 6 || f.ocupado, firmar);
+}
+async function pedirCodigo() {
+  const f = S.f; if (f.ocupado) return; f.ocupado = true; f.error = ''; renderFirma();
+  try {
+    const r = await API.post(`/comprador/${TOKEN}/codigo`, { propuesta: items() });
+    f.enviadoA = r.enviado_a; f.codigoPrueba = r.codigo_prueba; f.paso = 2; f.code = '';
+  } catch (e) {
+    if ([404, 409, 410].includes(e.status)) { f.ocupado = false; return errorDeLink(e); }
+    f.error = e.errores && e.errores.length ? e.errores.join(' ') : e.message;
+  }
+  f.ocupado = false; renderFirma(); window.scrollTo(0, 0);
+}
+async function firmar() {
+  const f = S.f; if (f.ocupado) return; f.ocupado = true; f.error = ''; renderFirma();
+  try {
+    const r = await API.post(`/comprador/${TOKEN}/firmar`, { propuesta: items(), codigo: f.code, acepta: f.acepto });
+    S.firma = { hash: r.hash, fecha: r.firmada_en, ajuste: r.ajuste, requiere_aprobacion: r.requiere_aprobacion };
+    f.ocupado = false; return ir('listo');
+  } catch (e) {
+    if ([404, 409, 410].includes(e.status)) { f.ocupado = false; return errorDeLink(e); }
+    f.error = e.errores && e.errores.length ? e.errores.join(' ') : e.message;
+  }
+  f.ocupado = false; renderFirma();
+  const el = $('#otp'); if (el) el.focus();
 }
 
-async function sha256(txt){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){let h=0;for(const ch of txt)h=(h*31+ch.charCodeAt(0))|0;return'sin-sha256-'+(h>>>0).toString(16)}}
-async function firmar(){
-  const f=S.f;
-  if(f.code!==f.otp){f.error='El código no coincide. Revísalo e inténtalo de nuevo.';render();const el=$('#otp');if(el)el.focus();return}
-  const c=calc(S,A),P=N.comprador;
-  const doc={venta:N.id_venta,inmueble:N.inmueble,firmante:P.nombre,documento:P.documento,correo:P.correo,
-    propuesta:orden().map(p=>[p.fecha,p.concepto,Math.round(p.valor)]),credito:c.nuevoCred,ajuste:c.ev.ajuste,metodo:CFG.metodo,fecha:new Date().toISOString()};
-  const hash=await sha256(JSON.stringify(doc));
-  S.firma={...doc,hash,requiereAprobacion:c.ev.requiereAprobacion};
-  ir('listo');
-}
-
-function renderListo(){
-  const c=calc(S,A),F=S.firma,{aj,tipo}=tipoDe(c);
-  const cuando=new Date(F.fecha).toLocaleString('es-CO',{day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit'});
-  const sigue=[F.requiereAprobacion?'Gerencia revisa y aprueba tu propuesta.':null,'Tu asesor carga el nuevo plan en IngeMAX.','Verificamos que el plan cargado coincida con lo que firmaste.'].filter(Boolean);
-  $('.barra').hidden=true;
-  $('#app').innerHTML=`<div class="solo">
+/* ═══════════ 4. CONFIRMACIÓN ═══════════ */
+function renderListo() {
+  const F = S.firma, aj = F.ajuste, tipo = aj <= -1 ? 'ahorro' : aj >= 1 ? 'sobre' : 'neutro';
+  const cuando = new Date(F.fecha).toLocaleString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const sigue = [F.requiere_aprobacion ? 'Gerencia revisa y aprueba tu propuesta.' : null, 'Tu asesor carga el nuevo plan en IngeMAX.', 'Verificamos que el plan cargado coincida con lo que firmaste.'].filter(Boolean);
+  $('.barra').hidden = true; cabecera();
+  $('#app').innerHTML = `<div class="solo">
     <section class="card ok" aria-label="Firma completada">
       <span class="sello-ok" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <h1 class="titulo">Propuesta firmada</h1>
-      <p>${esc(cuando)}</p>
-      <p class="res-ok" data-t="${tipo}">${tipo==='ahorro'?'Ahorras':tipo==='sobre'?'Pagas de más':'Sin cambio en el valor'}${tipo==='neutro'?'':' <strong>'+fmt(Math.abs(aj))+'</strong>'}</p>
+      <h1 class="titulo">Propuesta firmada</h1><p>${esc(cuando)}</p>
+      <p class="res-ok" data-t="${tipo}">${resumenBarra(tipo)}${tipo === 'neutro' ? '' : ' <strong>' + fmt(Math.abs(aj)) + '</strong>'}</p>
     </section>
-    <section class="card"><h2>Qué sigue</h2><ol class="sigue">${sigue.map(t=>`<li>${t}</li>`).join('')}</ol></section>
+    <section class="card"><h2>Qué sigue</h2><ol class="sigue">${sigue.map(t => `<li>${t}</li>`).join('')}</ol></section>
     <section class="card"><h2>Comprobante</h2>
-      <dl class="datos"><div><dt>Firmante</dt><dd>${esc(F.firmante)}</dd></div><div><dt>Inmueble</dt><dd>${esc(F.inmueble)}</dd></div>
-        <div><dt>Código de verificación</dt><dd class="hash">${F.hash.slice(0,16)}…</dd></div></dl>
+      <dl class="datos"><div><dt>Firmante</dt><dd>${esc(S.datos.comprador.nombre)}</dd></div><div><dt>Inmueble</dt><dd>${esc(S.datos.inmueble)}</dd></div>
+        <div><dt>Código de verificación</dt><dd class="hash">${esc(F.hash.slice(0, 16))}…</dd></div></dl>
       <p class="acc"><button class="btn sec" data-act="imprimir" type="button">Guardar como PDF</button><button class="txt-btn" data-act="hash" type="button">Copiar código completo</button></p>
     </section></div>`;
 }
 
-/* ═══════════ EVENTOS DE PASOS ═══════════ */
-$('#app').addEventListener('click',async e=>{
-  const act=e.target.dataset.act;if(!act)return;
-  if(act==='editar')ir('simular');
-  if(act==='revisar')ir('revisar');
-  if(act==='paso1'){S.f.paso=1;render()}
-  if(act==='reenviar'){S.f.otp=String(Math.floor(100000+Math.random()*900000));S.f.code='';S.f.error='';render();toast('Enviamos un código nuevo.')}
-  if(act==='imprimir')window.print();
-  if(act==='hash'){try{await navigator.clipboard.writeText(S.firma.hash);toast('Código copiado.')}catch(err){toast('No se pudo copiar. Selecciónalo y cópialo a mano.')}}
+/* ═══════════ EVENTOS ═══════════ */
+$('#app').addEventListener('change', e => {
+  if (e.target.id === 'acepto') { S.f.acepto = e.target.checked; $('#btnFirmar').disabled = !S.f.acepto; return; }
+  const row = e.target.closest('tr[data-id]'); if (!row) return;
+  const p = S.propuesta.find(x => x.id === row.dataset.id); if (!p) return;
+  if (e.target.dataset.k === 'fecha' && e.target.value) p.fecha = e.target.value;
+  if (e.target.dataset.k === 'valor') { p.valor = parseNum(e.target.value); p.fijo = true; rebalancear(); }
+  cambio(); renderSim();
 });
-$('#app').addEventListener('change',e=>{if(e.target.id==='acepto'){S.f.acepto=e.target.checked;$('#btnFirmar').disabled=!S.f.acepto}});
-$('#app').addEventListener('input',e=>{if(e.target.id==='otp'){e.target.value=e.target.value.replace(/\D/g,'').slice(0,6);S.f.code=e.target.value;$('#btnFirmar').disabled=S.f.code.length!==6}});
-$('#btnFirmar').addEventListener('click',()=>S.onBar&&S.onBar());
-render();
+$('#app').addEventListener('click', async e => {
+  const t = e.target;
+  if (t.id === 'btnReset') { S.propuesta = copia(S.inicial); cambio(); renderSim(); toast('Plan restablecido'); return; }
+  if (t.id === 'btnAbono') {
+    const f = addM(1, 15), fecha = f < S.reglas.hoy || (S.A.fechaLimite && f > S.A.fechaLimite) ? S.reglas.hoy : f;
+    S.propuesta.push({ id: nid(), fecha, concepto: S.reglas.concepto_abono, valor: S.reglas.cuota_min, fijo: true, abono: true });
+    rebalancear(); cambio(); renderSim(); return;
+  }
+  if (t.dataset.del) { S.propuesta = S.propuesta.filter(p => p.id !== t.dataset.del); rebalancear(); cambio(); renderSim(); return; }
+  const act = t.dataset.act; if (!act) return;
+  if (act === 'editar') ir('simular');
+  if (act === 'revisar') ir('revisar');
+  if (act === 'paso1') { S.f.paso = 1; S.f.error = ''; renderFirma(); }
+  if (act === 'reenviar') { await pedirCodigo(); if (!S.f.error) toast('Enviamos un código nuevo.'); }
+  if (act === 'imprimir') window.print();
+  if (act === 'hash') { try { await navigator.clipboard.writeText(S.firma.hash); toast('Código copiado.'); } catch (err) { toast('No se pudo copiar. Selecciónalo y cópialo a mano.'); } }
+});
+$('#app').addEventListener('input', e => {
+  if (e.target.id === 'otp') { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); S.f.code = e.target.value; $('#btnFirmar').disabled = S.f.code.length !== 6 || S.f.ocupado; }
+});
+$('#btnFirmar').addEventListener('click', () => S.onBar && S.onBar());
+
+/* ═══════════ INICIO ═══════════ */
+(async function iniciar() {
+  try {
+    const d = await API.get('/comprador/' + encodeURIComponent(TOKEN));
+    S.datos = d;
+    if (d.estado_ui !== 'enviada') {      // ya firmada (o en otro punto del trámite): se muestra el comprobante
+      S.firma = { hash: d.firma.hash, fecha: d.firma.fecha, ajuste: d.firma.ajuste, requiere_aprobacion: d.firma.requiere_aprobacion };
+      S.paso = 'listo'; return render();
+    }
+    S.A = adaptar(d.analisis); S.reglas = d.reglas;
+    S.propuesta = copia(d.propuesta); S.inicial = copia(d.propuesta);
+    S.res = d.resultado; S.resOk = true; S.paso = 'simular';
+    render();
+  } catch (e) { errorDeLink(e); }
+})();
 </script>
 </body>
 </html>

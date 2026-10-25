@@ -451,3 +451,30 @@ class GerenciaYCargaTest(BaseTest):
         s = self.crear()
         r = self.client.post(f"/api/solicitudes/{s['id']}/verificar", content_type="application/json")
         self.assertEqual(r.status_code, 409)
+
+
+class PaginasTest(BaseTest):
+    """Las pantallas se sirven desde /app/ y el comprador entra por /comprador/<token>."""
+
+    def test_la_raiz_lleva_al_login(self):
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r["Location"], "/app/login.html")
+
+    def test_pagina_de_login_y_recursos(self):
+        for ruta in ("/app/login.html", "/app/api.js", "/app/motor.js", "/app/img/logo-vyp.svg"):
+            r = self.client.get(ruta)
+            self.assertEqual(r.status_code, 200, ruta)
+            r.close()
+        self.assertEqual(self.client.get("/app/login.html")["Cache-Control"], "no-cache")
+
+    def test_no_se_puede_salir_de_la_carpeta_de_la_aplicacion(self):
+        for ruta in ("/app/../backend/replantea/settings.py", "/app/%2e%2e/backend/manage.py", "/app/../../etc/passwd", "/app/no-existe.html"):
+            self.assertEqual(self.client.get(ruta).status_code, 404, ruta)
+
+    def test_la_pagina_del_comprador_no_se_guarda_ni_filtra_el_token(self):
+        r = self.client.get("/comprador/cualquier-token")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Cache-Control"], "no-store")
+        self.assertEqual(r["Referrer-Policy"], "no-referrer")
+        r.close()

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingresar · Viviendas y Proyectos</title>
+<link rel="icon" type="image/svg+xml" href="/app/img/icono-vyp.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--fondo:#EBF0F2;--papel:#FFFFFF;--tinta:#17262E;--pizarra:#174250;--gris:#898E91;--gris-suave:#C9D1D5;--linea:#D5DDE1;--sobre:#8E2450;--sobre-fondo:#F6E4EC;
+  --radio-g:18px;--radio-m:10px;--radio-p:6px;--f-texto:'Onest',system-ui,sans-serif;--f-marca:'Barlow Condensed','Arial Narrow',sans-serif}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--fondo);color:var(--tinta);font:400 16px/1.5 var(--f-texto);padding:24px 16px}
+:focus-visible{outline:3px solid var(--pizarra);outline-offset:2px;border-radius:var(--radio-p)}
+main{width:100%;max-width:420px;display:grid;gap:20px}
+.logo{height:56px;display:block;margin:0 auto}
+.card{background:var(--papel);border-radius:var(--radio-g);padding:28px 24px;display:grid;gap:16px}
+h1{margin:0;font:700 30px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
+.campo{display:grid;gap:4px}
+.campo label{font-size:14px;font-weight:500}
+.campo input{min-height:48px;padding:8px 12px;border:1.5px solid var(--linea);border-radius:var(--radio-m);background:#F8FAFB;font:inherit}
+.campo input:hover{border-color:var(--gris)}
+.btn{min-height:50px;border:0;border-radius:var(--radio-m);background:var(--pizarra);color:#fff;font:600 16px var(--f-texto);cursor:pointer}
+.btn:hover:not(:disabled){background:#0F3340}
+.btn:disabled{background:var(--gris-suave);color:#5B6B72;cursor:not-allowed}
+.error{background:var(--sobre-fondo);color:#5A1735;border-radius:var(--radio-m);padding:10px 14px;font-size:14.5px;margin:0}
+.pie{text-align:center;font-size:13px;color:#52646C;margin:0}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/app/img/logo-vyp.svg" alt="Viviendas y Proyectos, bien hechos">
+  <form class="card" id="form" novalidate>
+    <h1>Ingresar</h1>
+    <div class="campo"><label for="usuario">Usuario</label><input id="usuario" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+    <div class="campo"><label for="clave">Contraseña</label><input id="clave" name="password" type="password" autocomplete="current-password" required></div>
+    <p class="error" id="error" role="alert" hidden></p>
+    <button class="btn" id="entrar" type="submit">Entrar</button>
+  </form>
+  <p class="pie">¿Eres comprador? Usa el link que te envió tu asesor.</p>
+</main>
+<script src="/app/api.js"></script>
+<script>
+const form = document.getElementById('form'), err = document.getElementById('error'), btn = document.getElementById('entrar');
+const destino = u => { const n = new URLSearchParams(location.search).get('next'); return n && n.startsWith('/app/') ? n : inicioDe(u); };
+
+// si ya hay una sesión válida, no se pide la contraseña otra vez
+API.get('/auth/yo').then(u => location.replace(destino(u))).catch(() => {});
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const username = form.username.value.trim(), password = form.password.value;
+  if (!username || !password) { err.textContent = 'Escribe tu usuario y tu contraseña.'; err.hidden = false; return; }
+  btn.disabled = true; btn.textContent = 'Entrando…'; err.hidden = true;
+  try {
+    await fetch('/api/auth/csrf', { credentials: 'same-origin' });   // fija la cookie CSRF
+    const u = await API.post('/auth/login', { username, password });
+    location.replace(destino(u));
+  } catch (x) {
+    err.textContent = x.message; err.hidden = false;
+    btn.disabled = false; btn.textContent = 'Entrar'; form.password.select();
+  }
+});
+</script>
+</body>
+</html>

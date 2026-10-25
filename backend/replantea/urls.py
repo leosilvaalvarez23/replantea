@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.conf import settings
 from django.contrib import admin
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect
@@ -8,7 +9,7 @@ from django.urls import path
 from replantea.api import api
 
 # Pantallas de la aplicación (HTML + motor.js + imágenes)
-APP = Path("/app/prototipo/v2")
+APP = Path(settings.BASE_DIR).parent / "prototipo" / "v2"      # en Docker: /app/prototipo/v2
 
 
 def _archivo(ruta: str, **cabeceras):

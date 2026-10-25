@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Proyectos y tasas · Viviendas y Proyectos</title>
-<link rel="icon" type="image/svg+xml" href="img/icono-vyp.svg">
+<link rel="icon" type="image/svg+xml" href="/app/img/icono-vyp.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -102,28 +102,20 @@ legend{font:700 22px/1.1 var(--f-marca);color:var(--pizarra);padding:0;margin-bo
 </style>
 </head>
 <body>
-<div class="demo">Datos de demostración: los cambios no se guardan en el servidor.</div>
-<header class="top"><div class="in">
-  <a href="#/"><img class="logo" src="img/logo-vyp.svg" alt="Viviendas y Proyectos, bien hechos"></a>
-  <nav class="nav" aria-label="Principal"><a href="aprobaciones.html">Aprobaciones</a><a href="#/" aria-current="page">Proyectos</a></nav>
-  <span class="user">Gerencia (demo)</span>
-</div></header>
-<main id="app"></main>
+<header class="top"><div class="in" id="cab"></div></header>
+<main id="app"><p class="sub">Cargando…</p></main>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="motor.js"></script>
+<script src="/app/motor.js"></script>
+<script src="/app/api.js"></script>
 <script>
-/* ═══════════ DATOS DE DEMOSTRACIÓN ═══════════ */
-// mismos campos que ProyectoConfig (backend/proyectos/models.py)
-const PROYECTOS=[
-  {id:1,id_imx:1,nombre:'Pruebas',metodo:'liquidacion',tasa_cia:0.006,tasa_cliente:0.024,tasa_vpn:0.01,tope_pct:0.03,umbral_pct:0.015,cuota_min:1000000,concepto:'Descuento financiero plan de pagos',concepto_abono:'Recursos Propios',activo:true},
-  {id:7,id_imx:7,nombre:'Vida Park',metodo:'liquidacion',tasa_cia:0.006,tasa_cliente:0.01,tasa_vpn:0.008,tope_pct:0.03,umbral_pct:0.012,cuota_min:1000000,concepto:'Descuento financiero plan de pagos',concepto_abono:'Recursos Propios',activo:true},
-  {id:15,id_imx:15,nombre:'Mirador del Valle',metodo:'vpn',tasa_cia:0.006,tasa_cliente:0.01,tasa_vpn:0.008,tope_pct:0.025,umbral_pct:0.01,cuota_min:1500000,concepto:'Ajuste financiero plan de pagos',concepto_abono:'Recursos Propios',activo:true},
-  {id:9,id_imx:9,nombre:'Torres del Parque',metodo:'liquidacion',tasa_cia:0.006,tasa_cliente:0.024,tasa_vpn:0.01,tope_pct:0.03,umbral_pct:0.015,cuota_min:1000000,concepto:'Descuento financiero plan de pagos',concepto_abono:'Recursos Propios',activo:false}
-];
+/* ═══════════ DATOS ═══════════ */
+// Proyectos: los mismos campos que ProyectoConfig (backend/proyectos/models.py), desde la API
+let PROYECTOS=[];
 const cuotas=(n,desde,dia,valor,concepto='Recursos Propios',extra=()=>({}))=>Array.from({length:n},(_,i)=>({fecha_pp:addM(desde+i,dia),concepto,valor,...extra(i)}));
 const pagos=(n,desde,dia,valor,concepto='Recursos Propios')=>Array.from({length:n},(_,i)=>({fecha:addM(desde+i,dia),concepto,valor}));
-const NEGOCIOS=[
+// Respaldo para la simulación si IngeMAX no responde
+const EJEMPLOS=[
   {id_venta:2502,inmueble:'T2 - AP-504 (al día, con crédito)',valor_venta:412000000,valor_credito:294000000,fecha_escrituracion_programada:addM(13,20),
     plan_pagos:[{fecha_pp:addM(-12,5),concepto:'Separacion',valor:10000000},...cuotas(24,-11,5,4500000,'Cuota inicial')],
     recaudo:[{fecha:addM(-12,5),concepto:'Separacion',valor:10000000},...pagos(8,-11,6,4500000)]},
@@ -164,7 +156,7 @@ const claves=['metodo','tasa_cia','tasa_cliente','tasa_vpn','tope_pct','umbral_p
 const sucio=(d,p)=>{const o=toDraft(p);return claves.some(k=>String(d[k])!==String(o[k]))};
 
 /* ═══════════ ESTADO ═══════════ */
-const UI={id:null,draft:null,drafts:{},neg:2502,esc:'adelanto'};
+const UI={id:null,draft:null,drafts:{},neg:null,esc:'adelanto',negs:EJEMPLOS,negsDe:{},guardando:false};
 const proy=id=>PROYECTOS.find(p=>p.id===id);
 
 /* ═══════════ LISTA ═══════════ */
@@ -212,7 +204,7 @@ function vistaEditar(id){
       <label class="sw"><input type="checkbox" id="c-activo" ${d.activo?'checked':''}><span>Proyecto activo: los asesores pueden crear solicitudes</span></label></fieldset></section>
   </form>
   <aside class="card sim sticky" aria-label="Simulación de prueba"><h2>Prueba el cambio</h2><p class="sub" style="margin-top:6px">Mira cuánto cambia el resultado antes de guardar.</p>
-    <div class="campo"><label for="s-neg">Negocio de ejemplo</label><select id="s-neg">${NEGOCIOS.map(n=>`<option value="${n.id_venta}" ${n.id_venta===UI.neg?'selected':''}>${esc(n.inmueble)}</option>`).join('')}</select></div>
+    <div class="campo"><label for="s-neg">Negocio de ejemplo</label><select id="s-neg">${UI.negs.map(n=>`<option value="${n.id_venta}" ${n.id_venta===UI.neg?'selected':''}>${esc(n.inmueble)}</option>`).join('')}</select></div>
     <div class="campo"><label for="s-esc">Propuesta del comprador</label><select id="s-esc">${ESCENARIOS.map(([k,t])=>`<option value="${k}" ${k===UI.esc?'selected':''}>${t}</option>`).join('')}</select></div>
     <div id="sim-res"></div></aside></div>
   <div class="guardar"><div class="in"><span class="est" id="estado" role="status"></span>
@@ -221,14 +213,14 @@ function vistaEditar(id){
 }
 
 function simular(cfg){
-  const n=NEGOCIOS.find(x=>x.id_venta===UI.neg),a=analizar(n),prop=variante(initPropuesta(a),UI.esc);
+  const n=UI.negs.find(x=>x.id_venta===UI.neg),a=analizar(n),prop=variante(initPropuesta(a),UI.esc);
   return calc({propuesta:prop},a,n,cfg);
 }
 const res=aj=>aj<=-1?`<span class="ahorro">Ahorra ${fmt(-aj)}</span>`:aj>=1?`<span class="sobre">Paga ${fmt(aj)} de más</span>`:'Sin cambio';
 // actualiza simulación, estado y botones sin reconstruir el formulario (conserva el foco)
 function actualizar(){
   const p=proy(UI.id),{v,ok,e}=leer(UI.draft),cambio=sucio(UI.draft,p);
-  const base=simular(aCfg(p)),n=NEGOCIOS.find(x=>x.id_venta===UI.neg);
+  const base=simular(aCfg(p)),n=UI.negs.find(x=>x.id_venta===UI.neg);
   let html;
   if(!ok)html='<div class="aviso err" role="alert">Corrige los campos marcados para ver la simulación.</div>';
   else{const nu=simular(aCfg(v)),dif=nu.ev.ajuste-base.ev.ajuste;
@@ -265,18 +257,62 @@ document.addEventListener('click',e=>{
   const row=e.target.closest('tbody tr[data-id]');if(row&&!e.target.closest('a')){location.hash='#/p/'+row.dataset.id;return}
   const m=e.target.closest('[data-metodo]');if(m){UI.draft.metodo=m.dataset.metodo;vistaEditar(UI.id);return}
   if(e.target.id==='btn-desc'){delete UI.drafts[UI.id];vistaEditar(UI.id);toast('Cambios descartados.')}
-  if(e.target.id==='btn-guardar'){const {v,ok}=leer(UI.draft);if(!ok)return;Object.assign(proy(UI.id),v);delete UI.drafts[UI.id];vistaEditar(UI.id);toast('Cambios guardados.')}
+  if(e.target.id==='btn-guardar')guardar();
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('tbody tr[data-id]'))location.hash='#/p/'+e.target.dataset.id});
 window.addEventListener('beforeunload',e=>{if(Object.entries(UI.drafts).some(([id,d])=>sucio(d,proy(Number(id))))){e.preventDefault();e.returnValue=''}});
 
+/* ═══════════ NEGOCIOS DE EJEMPLO Y GUARDADO ═══════════ */
+// Negocios reales del proyecto (IngeMAX) para probar el cambio; si no hay, los de respaldo
+async function cargarNegocios(p){
+  if(UI.negsDe[p.id]){UI.negs=UI.negsDe[p.id];if(!UI.negs.find(n=>n.id_venta===UI.neg))UI.neg=UI.negs[0].id_venta;return}
+  let lista=EJEMPLOS;
+  try{
+    const r=await API.get('/negocios?proyecto_id='+p.id_imx);
+    const buenos=r.filter(n=>Array.isArray(n.plan_pagos)&&n.plan_pagos.length&&n.valor_venta).slice(0,25)
+      .map(n=>({...n,id_venta:n.id_venta||n.id,recaudo:n.recaudo||[],valor_credito:n.valor_credito||0,inmueble:(n.inmueble||'Venta '+(n.id_venta||n.id))}));
+    if(buenos.length)lista=buenos;
+  }catch(e){if(e.status===401)throw e}
+  UI.negsDe[p.id]=lista;UI.negs=lista;
+  if(!lista.find(n=>n.id_venta===UI.neg))UI.neg=lista[0].id_venta;
+}
+async function guardar(){
+  if(UI.guardando)return;
+  const {v,ok}=leer(UI.draft);if(!ok)return;
+  const p=proy(UI.id);UI.guardando=true;$('#btn-guardar').disabled=true;
+  try{
+    // solo viajan los campos que cambiaron
+    const cambios={};for(const k of claves){if(String(toDraft({...p,...v})[k])!==String(toDraft(p)[k]))cambios[k]=v[k]}
+    await API.patch('/proyectos/'+p.id,cambios);
+    Object.assign(p,v);delete UI.drafts[UI.id];vistaEditar(UI.id);toast('Cambios guardados.');
+  }catch(e){
+    if(e.status===401)return location.replace('/app/login.html?next='+encodeURIComponent(location.pathname+location.hash));
+    toast(e.message);actualizar();
+  }finally{UI.guardando=false}
+}
+
 /* ═══════════ RUTAS ═══════════ */
-function render(){
+async function render(){
   const h=location.hash||'#/';
-  if(h.startsWith('#/p/'))vistaEditar(Number(h.slice(4)));else{UI.id=null;UI.draft=null;vistaLista()}
+  try{
+    PROYECTOS=await API.get('/proyectos?todos=true');
+    if(h.startsWith('#/p/')){
+      const p=proy(Number(h.slice(4)));
+      if(p)await cargarNegocios(p);
+      vistaEditar(Number(h.slice(4)));
+    }else{UI.id=null;UI.draft=null;vistaLista()}
+  }catch(e){
+    if(e.status===401)return location.replace('/app/login.html?next='+encodeURIComponent(location.pathname+location.hash));
+    $('#app').innerHTML='<div class="card"><p>'+esc(e.message)+'</p><button class="txt-btn" onclick="render()">Reintentar</button></div>';
+  }
 }
 window.addEventListener('hashchange',()=>{render();window.scrollTo(0,0)});
-render();
+(async()=>{
+  const u=await exigirSesion(['gerente']);
+  if(!u)return;
+  pintarCabecera(u,'/app/proyectos.html');
+  render();
+})();
 </script>
 </body>
 </html>

@@ -112,12 +112,13 @@ App web para que los compradores de proyectos de vivienda **modifiquen su plan d
 - [x] Repositorio GitHub `replantea` → `github.com/leosilvaalvarez23/replantea`. **Es PÚBLICO** (el CLAUDE.md anterior decía privado). No versionar secretos; la contraseña de `admin` estuvo publicada en el historial y debe rotarse.
 - [x] Motor `engine/engine.py` (14 tests) + análisis y validación `engine/analisis.py` (25 tests): FIFO, mora, vencido, crédito, excedente al crédito, validaciones. El servidor recalcula todo; el navegador nunca es la fuente de verdad.
 - [x] Backend Django + Ninja: apps `usuarios`, `proyectos`, `solicitudes`; **autenticación por sesión de Django** (cookie + CSRF, mismo dominio) con roles fijos; API de solicitudes, comprador por token, aprobaciones y proyectos. 35 tests de API.
-- [x] Diseño del frontend (prototipos con datos de demostración) en `prototipo/v2/`: simulador del comprador, bandeja y detalle del asesor, portal de proyectos y aprobaciones de gerencia.
+- [x] Frontend en `prototipo/v2/` conectado a la API (sin datos de demostración): `login.html`, `comprador.html` (se sirve en `/comprador/<token>`), `asesor.html`, `proyectos.html`, `aprobaciones.html`; `api.js` (sesión + CSRF) y `motor.js` (gráfica y formato; el cálculo oficial es el del servidor). Se sirven desde `/app/`. La raíz `/` redirige al login.
 - [x] Servidor pruebas: Docker, swap 2 GB, fail2ban, SSH solo llave.
 
 ### Cómo se prueba
 - Motor: `pytest engine/` (desde la raíz, con `PYTHONPATH=.`).
-- API: `cd backend && python manage.py test` (sqlite; IngeMAX y el correo se simulan).
+- API: `cd backend && python manage.py test` (sqlite; IngeMAX y el correo se simulan): 39 tests.
+- Extremo a extremo (2026-10-24): las páginas reales contra el backend real (Django en Pyodide, con CSRF activo) recorrieron login, comprador (evaluar, OTP, firma), asesor (crear, enviar, cargar, verificar), gerente (aprobar, devolver) y proyectos (simular, guardar). Falta repetirlo en el servidor de pruebas.
 - En un PC sin Python se verificó ejecutando Python en el navegador con Pyodide (solo pruebas).
 
 ### API (`/api/`)
@@ -129,8 +130,7 @@ App web para que los compradores de proyectos de vivienda **modifiquen su plan d
 
 ### Próximos pasos
 - [ ] **Rotar la contraseña de `admin`** en el servidor (estuvo en el repo público) y el token de IngeMAX antes de producción
-- [ ] Conectar las pantallas de `prototipo/v2/` a la API (hoy usan datos de demostración): página de login, comprador, asesor, proyectos, aprobaciones
-- [ ] Desplegar y probar el flujo completo en el servidor de pruebas (las pantallas viejas `prototipo/replantea.html` y `config.html` ya no se sirven)
+- [ ] Desplegar y probar el flujo completo en el servidor de pruebas, con usuarios reales creados en /admin/ (las pantallas viejas `prototipo/replantea.html` y `config.html` ya no se sirven)
 - [ ] Correo real del OTP (Brevo/SMTP): en pruebas se muestra en pantalla (`OTP_MOSTRAR=1`); en producción `OTP_MOSTRAR=0`
 - [ ] PDF de la propuesta firmada; log de auditoría
 - [ ] Con VyP: tasas por proyecto, días de gracia (los define IngeMAX), conceptos exactos (¿el cargo usa el mismo concepto del descuento?), usuarios, textos legales
