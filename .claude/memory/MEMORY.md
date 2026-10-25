@@ -1,4 +1,5 @@
 # Memory Index — Replantea
 
-- [Proyecto Replantea: servidor, repo, stack](project_replantea.md) — Setup completo 2026-10-20: SSH keys, servidor Hetzner, GitHub, FastAPI+Caddy, IngeMAX API, motor Python
-- [Decisión pendiente: mora en motor de cálculo](project_calc_mora.md) — Opción 2 (pactado=a.pend fechas reales) vs opción 1 actual (vencidas→hoy); retomar mañana
+- [Estado de Replantea (2026-10-24)](project_replantea.md) — Backend Django+Ninja con sesión, pantallas v2 conectadas, repo PÚBLICO, cómo verificar sin Python, pendientes (rotar contraseña admin, desplegar)
+- [Reglas de mora/crédito del motor](project_calc_mora.md) — Cómo se calcula mora, propuesta inicial y excedente al crédito (implementado)
+- [Cómo trabaja Leonardo](feedback_trabajo_con_leonardo.md) — Español, commits/push solo si los pide, bloques con resumen, opciones con recomendación

@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><title>unit</title><pre id="o">cargando…</pre>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+<script>
+const PY=[
+ 'engine/__init__.py','engine/engine.py','engine/analisis.py','engine/test_engine.py','engine/test_analisis.py',
+ 'backend/manage.py','backend/imx_client.py',
+ 'backend/replantea/__init__.py','backend/replantea/settings.py','backend/replantea/urls.py','backend/replantea/api.py','backend/replantea/auth.py','backend/replantea/asgi.py',
+ 'backend/usuarios/__init__.py','backend/usuarios/apps.py','backend/usuarios/models.py','backend/usuarios/admin.py','backend/usuarios/migrations/__init__.py','backend/usuarios/migrations/0001_initial.py',
+ 'backend/proyectos/__init__.py','backend/proyectos/apps.py','backend/proyectos/models.py','backend/proyectos/admin.py','backend/proyectos/migrations/__init__.py','backend/proyectos/migrations/0001_initial.py',
+ 'backend/solicitudes/__init__.py','backend/solicitudes/apps.py','backend/solicitudes/models.py','backend/solicitudes/admin.py','backend/solicitudes/servicios.py','backend/solicitudes/api.py','backend/solicitudes/tests.py',
+ 'backend/solicitudes/migrations/__init__.py','backend/solicitudes/migrations/0001_initial.py','backend/solicitudes/migrations/0002_initial.py','backend/solicitudes/migrations/0003_flujo_completo.py'];
+const WEB=['login.html','comprador.html','api.js','motor.js','img/logo-vyp.svg'];
+window.R={fase:'inicio'};
+async function main(){
+  const py=await loadPyodide();
+  await py.loadPackage(['micropip','sqlite3','pydantic','tzdata','ssl']);
+  const put=(p,t)=>{py.FS.mkdirTree(p.split('/').slice(0,-1).join('/'));py.FS.writeFile(p,t)};
+  for(const f of PY)put('/app/'+f,await (await fetch('/src/'+f)).text());
+  for(const f of WEB)put('/app/prototipo/v2/'+f,await (await fetch('/app/'+f)).text());
+  await py.runPythonAsync(`import micropip\nawait micropip.install(['django','django-ninja','whitenoise','httpx','pytest'])`);
+  window.py=py;R.fase='listo';
+}
+main().catch(e=>{R.fase='ERROR '+e});
+</script>

@@ -1,0 +1,94 @@
+<!doctype html><meta charset="utf-8"><title>e2e</title>
+<style>body{margin:0;font:12px sans-serif}#estado{padding:4px 8px;background:#eee}iframe{border:0;display:block;background:#fff}</style>
+<div id="estado">arrancando…</div>
+<iframe id="v" style="width:100%;height:640px"></iframe>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+<script>
+const FILES=[
+ 'engine/__init__.py','engine/engine.py','engine/analisis.py',
+ 'backend/manage.py','backend/imx_client.py',
+ 'backend/replantea/__init__.py','backend/replantea/settings.py','backend/replantea/urls.py','backend/replantea/api.py','backend/replantea/auth.py','backend/replantea/asgi.py',
+ 'backend/usuarios/__init__.py','backend/usuarios/apps.py','backend/usuarios/models.py','backend/usuarios/admin.py','backend/usuarios/migrations/__init__.py','backend/usuarios/migrations/0001_initial.py',
+ 'backend/proyectos/__init__.py','backend/proyectos/apps.py','backend/proyectos/models.py','backend/proyectos/admin.py','backend/proyectos/migrations/__init__.py','backend/proyectos/migrations/0001_initial.py',
+ 'backend/solicitudes/__init__.py','backend/solicitudes/apps.py','backend/solicitudes/models.py','backend/solicitudes/admin.py','backend/solicitudes/servicios.py','backend/solicitudes/api.py',
+ 'backend/solicitudes/migrations/__init__.py','backend/solicitudes/migrations/0001_initial.py','backend/solicitudes/migrations/0002_initial.py','backend/solicitudes/migrations/0003_flujo_completo.py'
+];
+const SETUP=`
+import os, sys, datetime
+os.chdir('/app/backend'); sys.path[:0]=['/app','/app/backend']
+os.environ.update(DJANGO_SETTINGS_MODULE='replantea.settings', DJANGO_ALLOW_ASYNC_UNSAFE='true', OTP_MOSTRAR='1', DEBUG='1')
+os.environ.pop('DATABASE_URL',None)
+import django; django.setup()
+from django.conf import settings
+settings.PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher']
+from django.test.utils import setup_test_environment
+setup_test_environment()
+from django.test.runner import DiscoverRunner
+DiscoverRunner(verbosity=0, interactive=False).setup_databases()
+
+from django.utils import timezone
+def mes(i):
+    h=timezone.localdate(); y,m=divmod(h.month-1+i,12); return f"{h.year+y}-{m+1:02d}-28"
+def cuotas(n,desde,valor,concepto,extra=lambda i:{}):
+    return [dict(fecha_pp=mes(desde+i),concepto=concepto,valor=valor,**extra(i)) for i in range(n)]
+def pagos(n,desde,valor):
+    return [dict(fecha=mes(desde+i),concepto='Recursos Propios',valor=valor) for i in range(n)]
+NEGS=[
+ dict(id_venta=1974,inmueble='T1 - 602',cliente_negocio='Comprador Uno',cliente_identificacion='1000000001',correo='uno@ejemplo.co',valor_venta=487500000,valor_credito=341250000,fecha_escrituracion_programada='1900-01-01',
+      plan_pagos=cuotas(15,-9,9750000,'Recursos Propios',lambda i:dict(int_mora=180000 if i<9 else 0,int_aplicado=1 if i<5 else (60000 if i==6 else 0))),
+      recaudo=pagos(5,-9,10000000)+[dict(fecha=mes(-4),concepto='Recursos Propios',valor=10400000)]),
+ dict(id_venta=2502,inmueble='T2 - AP-504',cliente_negocio='Comprador Dos',cliente_identificacion='1000000002',correo='dos@ejemplo.co',valor_venta=412000000,valor_credito=294000000,fecha_escrituracion_programada=mes(13),
+      plan_pagos=[dict(fecha_pp=mes(-12),concepto='Separacion',valor=10000000)]+cuotas(24,-11,4500000,'Cuota inicial'),
+      recaudo=[dict(fecha=mes(-12),concepto='Separacion',valor=10000000)]+pagos(8,-11,4500000)),
+ dict(id_venta=3107,inmueble='C - CASA-12',cliente_negocio='Comprador Tres',cliente_identificacion='1000000003',valor_venta=280500000,valor_credito=168300000,fecha_escrituracion_programada=mes(11),
+      plan_pagos=cuotas(16,-5,6700000,'Cuota inicial'),recaudo=pagos(5,-5,6700000)),
+]
+import imx_client
+imx_client.fetch_negocios=lambda pid: NEGS
+imx_client.fetch_negocio=lambda pid,vid: next((n for n in NEGS if n['id_venta']==vid),None)
+
+from proyectos.models import ProyectoConfig
+from usuarios.models import Usuario
+ProyectoConfig.objects.create(nombre='Vida Park',id_imx=7,metodo='liquidacion',tasa_cia=0.006,tasa_cliente=0.01,tope_pct=0.03,umbral_pct=0.0015,cuota_min=1000000,concepto='Descuento financiero plan de pagos',concepto_abono='Recursos Propios')
+ProyectoConfig.objects.create(nombre='Mirador del Valle',id_imx=15,metodo='vpn',tasa_vpn=0.008,tope_pct=0.025,umbral_pct=0.01,cuota_min=1500000,activo=False)
+Usuario.objects.create_user('asesor1',password='clave-asesor-1',rol='asesor',first_name='Ana',last_name='Asesora')
+Usuario.objects.create_user('gerente1',password='clave-gerente-1',rol='gerente',first_name='Gabriel',last_name='Gerente')
+
+from django.test import Client
+client=Client(enforce_csrf_checks=True)
+def api_call(method,path,body,ctype,csrf):
+    kw={'HTTP_X_FORWARDED_FOR':'203.0.113.9'}
+    if csrf: kw['HTTP_X_CSRFTOKEN']=csrf
+    r=client.generic(method,path,data=body or '',content_type=ctype or 'application/octet-stream',**kw)
+    return {'status':r.status_code,'body':r.content.decode('utf-8'),'ctype':r.headers.get('Content-Type',''),'cookies':{k:m.value for k,m in client.cookies.items()}}
+'listo'
+`;
+window.E2E={estado:'inicio',calls:[]};
+const est=t=>{document.getElementById('estado').textContent=t;E2E.estado=t};
+async function arrancar(){
+  est('cargando Pyodide…');
+  const py=await loadPyodide();
+  await py.loadPackage(['micropip','sqlite3','pydantic','tzdata','ssl']);
+  est('cargando código…');
+  for(const f of FILES){
+    const t=await (await fetch('/src/'+f)).text();
+    py.FS.mkdirTree(('/app/'+f).split('/').slice(0,-1).join('/'));py.FS.writeFile('/app/'+f,t);
+  }
+  est('instalando Django…');
+  await py.runPythonAsync(`import micropip\nawait micropip.install(['django','django-ninja','whitenoise','httpx'])`);
+  est('creando base y datos…');
+  await py.runPythonAsync(SETUP);
+  const llamar=py.globals.get('api_call');
+  window.__apiShim=async(url,opts={})=>{
+    const u=new URL(url,location.origin),h=opts.headers||{},m=(opts.method||'GET').toUpperCase();
+    const r=llamar(m,u.pathname+u.search,opts.body||null,h['Content-Type']||null,h['X-CSRFToken']||null).toJs({dict_converter:Object.fromEntries});
+    for(const [k,v] of Object.entries(r.cookies))document.cookie=`${k}=${v}; path=/`;
+    E2E.calls.push(`${m} ${u.pathname} -> ${r.status}`);
+    return new Response(r.body,{status:r.status,headers:{'Content-Type':r.ctype}});
+  };
+  window.py=py;
+  est('listo');
+}
+arrancar().catch(e=>{est('ERROR '+e);console.error(e)});
+window.ir=(url)=>new Promise(res=>{const v=document.getElementById('v');v.onload=()=>res();v.src=url});
+</script>
