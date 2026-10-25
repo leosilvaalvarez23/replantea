@@ -119,7 +119,7 @@ App web para que los compradores de proyectos de vivienda **modifiquen su plan d
 - Motor: `pytest engine/` (desde la raíz, con `PYTHONPATH=.`).
 - API: `cd backend && python manage.py test` (sqlite; IngeMAX y el correo se simulan): 39 tests.
 - Extremo a extremo (2026-10-24): las páginas reales contra el backend real (Django en Pyodide, con CSRF activo) recorrieron login, comprador (evaluar, OTP, firma), asesor (crear, enviar, cargar, verificar), gerente (aprobar, devolver) y proyectos (simular, guardar). Falta repetirlo en el servidor de pruebas.
-- En un PC sin Python: `.	ools2einiciar.ps1` y abrir `http://localhost:8768/e2e.html` (flujo completo) o `unit.html` (tests); ejecuta Django en el navegador con Pyodide. Detalle en `tools/e2e/README.md`.
+- En un PC sin Python: `./tools/e2e/iniciar.ps1` (PowerShell) y abrir `http://localhost:8768/e2e.html` (flujo completo) o `unit.html` (tests); ejecuta Django en el navegador con Pyodide. Detalle en `tools/e2e/README.md`.
 
 ### API (`/api/`)
 - Sesión: `GET auth/csrf`, `POST auth/login`, `POST auth/logout`, `GET auth/yo`. Las peticiones que modifican datos envían `X-CSRFToken`.
