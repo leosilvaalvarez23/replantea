@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aprobaciones · Viviendas y Proyectos</title>
+<link rel="icon" type="image/svg+xml" href="img/icono-vyp.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fondo:#EBF0F2;--papel:#FFFFFF;--tinta:#17262E;--pizarra:#174250;--gris:#898E91;--gris-suave:#C9D1D5;--linea:#D5DDE1;
+  --pagado:#A7B4BA;--propuesta:#3E87AA;--credito:#6F8794;
+  --ahorro:#2F7D32;--ahorro-fondo:#E4F1E3;--sobre:#8E2450;--sobre-fondo:#F6E4EC;--ambar:#8A5A00;--ambar-fondo:#FBF0D5;
+  --radio-g:18px;--radio-m:10px;--radio-p:6px;
+  --f-texto:'Onest',system-ui,sans-serif;--f-marca:'Barlow Condensed','Arial Narrow',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);font:400 15px/1.5 var(--f-texto);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--pizarra);outline-offset:2px;border-radius:var(--radio-p)}
+a{color:var(--pizarra)}
+h1,h2,h3{margin:0}
+h1{font:700 32px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
+h2{font:700 22px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
+.top{background:var(--papel);border-bottom:1px solid var(--linea)}
+.top .in{max-width:1180px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:32px}
+.logo{height:42px;display:block}
+.nav{display:flex;gap:4px}
+.nav a{padding:8px 14px;border-radius:var(--radio-m);text-decoration:none;font-weight:500;color:#41545D}
+.nav a[aria-current=page]{background:var(--fondo);color:var(--pizarra)}
+.top .user{margin-left:auto;font-size:14px;color:#52646C}
+.demo{background:var(--ambar-fondo);color:var(--ambar);font-size:13px;text-align:center;padding:6px 12px}
+main{max-width:1180px;margin:0 auto;padding:28px 24px 64px;display:grid;gap:20px}
+.cab p{margin:6px 0 0;color:#41545D}
+.btn{min-height:46px;padding:0 22px;border-radius:var(--radio-m);border:0;background:var(--pizarra);color:#fff;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:#0F3340}
+.btn:disabled{background:var(--gris-suave);color:#5B6B72;cursor:not-allowed}
+.btn.sec{background:var(--papel);color:var(--pizarra);border:2px solid var(--pizarra)}
+.btn.sec:hover:not(:disabled){background:var(--fondo)}
+.txt-btn{background:none;border:0;padding:6px 4px;color:var(--pizarra);font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.card{background:var(--papel);border-radius:var(--radio-g);padding:22px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--linea)}
+.tabs button{background:none;border:0;padding:10px 14px;margin-bottom:-2px;border-bottom:3px solid transparent;color:#41545D;font-weight:500;cursor:pointer}
+.tabs button[aria-selected=true]{color:var(--pizarra);border-bottom-color:var(--pizarra);font-weight:600}
+.tabs .n{color:#52646C;font-weight:400;margin-left:4px}
+.maestro{display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px;align-items:start}
+.lista{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.lista button{width:100%;text-align:left;background:var(--papel);border:1.5px solid transparent;border-radius:var(--radio-m);padding:14px 16px;cursor:pointer;display:grid;gap:2px}
+.lista button:hover{border-color:var(--gris-suave)}
+.lista button[aria-current=true]{border-color:var(--pizarra);box-shadow:inset 0 0 0 1px var(--pizarra)}
+.lista b{font-weight:600}
+.lista .fila{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.sub{display:block;font-size:13px;color:#52646C}
+.ahorro{color:var(--ahorro);font-weight:600}.sobre{color:var(--sobre);font-weight:600}
+.pila{display:grid;gap:20px}
+.cab-d{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 10px;border-radius:999px;background:var(--fondo);font-weight:500;font-size:14px}
+.punto{width:10px;height:10px;border-radius:50%;background:#C58A12}.punto.ap{background:var(--ahorro)}.punto.dev{background:var(--sobre)}
+.motivo{border-radius:var(--radio-m);background:var(--ambar-fondo);color:#5E3C00;padding:14px 16px}
+.motivo b{font-weight:600}
+.motivo .cifras{display:flex;gap:28px;flex-wrap:wrap;margin-top:8px}
+.motivo .cifras div{display:grid}
+.motivo .cifras span{font-size:13px}
+.motivo .cifras strong{font-size:20px;font-weight:600}
+.fila-res{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.fila-res .cifra{font-size:40px;font-weight:300;letter-spacing:-.02em;line-height:1.1}
+.linea svg{width:100%;height:auto;max-height:230px;display:block;overflow:visible}
+.leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 0;padding:0;list-style:none;font-size:13px;color:#41545D}
+.leyenda li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:10px;border-radius:2px;display:inline-block}
+.sw.pag{background:var(--pagado)}.sw.act{border:2px dashed var(--tinta)}.sw.pro{background:var(--propuesta)}.sw.cre{background:var(--credito)}
+.tabla{width:100%;border-collapse:collapse;font-size:14.5px}
+.tabla th{text-align:left;font-size:13px;font-weight:500;color:#52646C;padding:0 0 8px;border-bottom:2px solid var(--pizarra)}
+.tabla td{padding:8px 0;border-bottom:1px solid var(--linea)}
+.tabla .der,.tabla th.der{text-align:right}
+.tabla .lado{border-left:1px solid var(--linea);padding-left:14px}
+.tabla thead tr:first-child th{font:700 18px/1.2 var(--f-marca);color:var(--pizarra);border-bottom:0;padding-bottom:6px}
+.tabla .venc{color:var(--sobre);font-weight:500}
+.tabla tfoot td{font-weight:600;border-bottom:0}
+.aviso{border-radius:var(--radio-m);padding:12px 14px;font-size:14px;margin-top:12px}
+.aviso p{margin:0}
+.aviso.mora{background:var(--sobre-fondo);color:#5A1735}.aviso.cred{background:var(--ambar-fondo);color:var(--ambar)}
+.aviso.ok{background:var(--ahorro-fondo);color:#1D5A20}.aviso.dev{background:var(--sobre-fondo);color:#5A1735}
+.datos{margin:8px 0 0;display:grid}
+.datos div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--linea)}
+.datos div:first-child{border-top:0}
+.datos dt{color:#52646C;font-size:14px}.datos dd{margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px}
+.decision{position:sticky;bottom:0;background:var(--papel);border-radius:var(--radio-g);padding:18px 22px;box-shadow:0 -2px 0 var(--linea)}
+.decision .btns{display:flex;gap:12px;flex-wrap:wrap}
+.decision label{display:block;font-weight:500;margin-bottom:4px}
+.decision textarea{width:100%;min-height:92px;padding:10px 12px;border:1.5px solid var(--linea);border-radius:var(--radio-m);background:#F8FAFB;resize:vertical}
+.decision .ayuda{font-size:13px;color:#52646C;margin:4px 0 12px}
+.vacio{padding:40px 16px;text-align:center;color:#52646C}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 18px;border-radius:var(--radio-m);font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+.toast.on{opacity:1}
+@media(max-width:1000px){.maestro{grid-template-columns:1fr}.top .in{gap:16px;padding:10px 16px}main{padding:20px 16px 48px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="demo">Datos de demostración: las decisiones no se envían a ningún servidor.</div>
+<header class="top"><div class="in">
+  <a href="#/"><img class="logo" src="img/logo-vyp.svg" alt="Viviendas y Proyectos, bien hechos"></a>
+  <nav class="nav" aria-label="Principal"><a href="#/" aria-current="page">Aprobaciones</a><a href="proyectos.html">Proyectos</a></nav>
+  <span class="user">Gerencia (demo)</span>
+</div></header>
+<main id="app"></main>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="motor.js"></script>
+<script>
+/* ═══════════ DATOS DE DEMOSTRACIÓN ═══════════ */
+// umbral bajo a propósito para que estas propuestas de prueba lo superen
+const CFG={metodo:'liquidacion',tasaCia:0.006,tasaCliente:0.01,tasaVpn:0.008,topePct:0.03,umbralPct:0.0015,cuotaMin:1000000,conceptoAbono:'Recursos Propios'};
+const PROY={1:'Pruebas',7:'Vida Park (demo)',15:'Mirador del Valle (demo)'};
+const cuotas=(n,desde,dia,valor,concepto='Cuota inicial',extra=()=>({}))=>Array.from({length:n},(_,i)=>({fecha_pp:addM(desde+i,dia),concepto,valor,...extra(i)}));
+const pagos=(n,desde,dia,valor,concepto='Recursos Propios')=>Array.from({length:n},(_,i)=>({fecha:addM(desde+i,dia),concepto,valor}));
+const NEGOCIOS=[
+  {id_venta:1974,proyecto_id:1,inmueble:'T1 - 602',comprador:{nombre:'Comprador demo uno',documento:'1.000.000.001'},valor_venta:487500000,valor_credito:341250000,fecha_escrituracion_programada:'1900-01-01',
+    plan_pagos:cuotas(15,-9,28,9750000,'Recursos Propios',i=>({int_mora:i<9?180000:0,int_aplicado:i<5?1:(i===5?0:(i===6?60000:0))})),
+    recaudo:[...pagos(5,-9,28,10000000),{fecha:addM(-4,28),concepto:'Recursos Propios',valor:10400000}]},
+  {id_venta:2502,proyecto_id:7,inmueble:'T2 - AP-504',comprador:{nombre:'Comprador demo dos',documento:'1.000.000.002'},valor_venta:412000000,valor_credito:294000000,fecha_escrituracion_programada:addM(13,20),
+    plan_pagos:[{fecha_pp:addM(-12,5),concepto:'Separacion',valor:10000000},...cuotas(24,-11,5,4500000)],
+    recaudo:[{fecha:addM(-12,5),concepto:'Separacion',valor:10000000},...pagos(8,-11,6,4500000)]},
+  {id_venta:3107,proyecto_id:15,inmueble:'C - CASA-12',comprador:{nombre:'Comprador demo tres',documento:'1.000.000.003'},valor_venta:280500000,valor_credito:168300000,fecha_escrituracion_programada:addM(11,30),
+    plan_pagos:[{fecha_pp:addM(-6,15),concepto:'Separacion',valor:5000000},...cuotas(16,-5,15,6700000)],
+    recaudo:[{fecha:addM(-6,15),concepto:'Separacion',valor:5000000},...pagos(5,-5,14,6700000)]},
+  {id_venta:2610,proyecto_id:7,inmueble:'T1 - AP-301',comprador:{nombre:'Comprador demo cuatro',documento:'1.000.000.004'},valor_venta:355000000,valor_credito:248500000,fecha_escrituracion_programada:addM(10,25),
+    plan_pagos:cuotas(12,-3,10,5900000),recaudo:pagos(3,-3,10,5900000)},
+  {id_venta:2755,proyecto_id:7,inmueble:'T3 - AP-1102',comprador:{nombre:'Comprador demo cinco',documento:'1.000.000.006'},valor_venta:520000000,valor_credito:364000000,fecha_escrituracion_programada:addM(14,30),
+    plan_pagos:cuotas(18,-4,5,8600000),recaudo:pagos(4,-4,5,8600000)}
+];
+const neg=id=>NEGOCIOS.find(n=>n.id_venta===id);
+// "adelanto": junta las últimas cuotas en la segunda. "todoYa": paga todo lo futuro en la primera fecha futura.
+function variante(prop,tipo){
+  const p=prop.map(x=>({...x}));
+  if(tipo==='adelanto'&&p.length>3){const u=p.splice(-3);p[1].valor+=u.reduce((s,x)=>s+x.valor,0);p[1].fijo=true}
+  if(tipo==='todoYa'&&p.length>1){const rest=p.splice(1);p[0].valor+=rest.reduce((s,x)=>s+x.valor,0)}
+  return p;
+}
+const dia=k=>{const d=new Date(CORTE+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+k);return iso(d)};
+const SOLS=[];
+function sol(id,negId,tipo,firmada,extra={}){const n=neg(negId),a=analizar(n);SOLS.push({id,negId,propuesta:variante(initPropuesta(a),tipo),firmada,estado:'pendiente',ip:'192.0.2.'+(20+SOLS.length)+' (prueba)',...extra})}
+sol('SOL-1004',1974,'todoYa',dia(-1));
+sol('SOL-1008',2502,'todoYa',dia(-2));
+sol('SOL-1009',3107,'adelanto',dia(-3));
+sol('SOL-1010',2755,'todoYa',dia(-4));
+sol('SOL-1002',2610,'todoYa',dia(-8),{estado:'aprobada',decidida:dia(-7),por:'Gerencia (demo)'});
+sol('SOL-1003',2610,'todoYa',dia(-9),{estado:'devuelta',decidida:dia(-8),por:'Gerencia (demo)',comentario:'Pide revisar con el comprador la fecha de la segunda cuota: coincide con el cierre de la fiducia.'});
+const cadenaFirma=s=>s.id+'|'+s.propuesta.map(p=>[p.fecha,Math.round(p.valor)]).join(',');
+async function sha(t){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return'sin-sha256'}}
+
+/* ═══════════ CÁLCULO ═══════════ */
+function evaluar(s){const n=neg(s.negId),a=analizar(n),c=calc(s,a,n,CFG),aj=c.ev.ajuste;
+  return{n,a,c,aj,pct:Math.abs(aj)/n.valor_venta,umbral:Math.round(n.valor_venta*CFG.umbralPct)}}
+const pctTxt=v=>(v*100).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' %';
+const hace=f=>{const d=Math.round((Date.parse(CORTE+'T12:00:00Z')-Date.parse(f+'T12:00:00Z'))/86400000);return d<=0?'hoy':d===1?'ayer':`hace ${d} días`};
+
+/* ═══════════ ESTADO DE LA INTERFAZ ═══════════ */
+const UI={tab:'pendiente',sel:null,devolviendo:false,texto:''};
+const lista=()=>SOLS.filter(s=>UI.tab==='pendiente'?s.estado==='pendiente':s.estado!=='pendiente');
+
+function render(){
+  const pend=SOLS.filter(s=>s.estado==='pendiente').length,res=SOLS.length-pend,L=lista();
+  if(!L.find(s=>s.id===UI.sel))UI.sel=L[0]?L[0].id:null;
+  const frase=pend?`${pend} propuesta${pend===1?'':'s'} esperando tu decisión.`:'No tienes propuestas pendientes.';
+  $('#app').innerHTML=`
+  <div class="cab"><h1>Aprobaciones</h1><p>${frase}</p></div>
+  <div class="tabs" role="tablist" aria-label="Estado"><button role="tab" aria-selected="${UI.tab==='pendiente'}" data-tab="pendiente" type="button">Pendientes<span class="n">${pend}</span></button><button role="tab" aria-selected="${UI.tab==='resuelta'}" data-tab="resuelta" type="button">Resueltas<span class="n">${res}</span></button></div>
+  ${L.length?`<div class="maestro"><ul class="lista" aria-label="Propuestas">${L.map(s=>{const e=evaluar(s);return`<li><button type="button" data-sel="${s.id}" aria-current="${s.id===UI.sel}"><span class="fila"><b>${esc(e.n.inmueble)}</b><span class="${e.aj<0?'ahorro':'sobre'}">${fmt(Math.abs(e.aj))}</span></span><span class="sub">${esc(e.n.comprador.nombre)} · ${esc(PROY[e.n.proyecto_id])}</span><span class="sub">Firmada ${hace(s.firmada)}</span></button></li>`}).join('')}</ul>
+    <div id="detalle"></div></div>`
+  :`<div class="card vacio"><p>${UI.tab==='pendiente'?'No hay propuestas por aprobar.':'Todavía no has resuelto ninguna propuesta.'}</p></div>`}`;
+  if(UI.sel)detalle();
+}
+
+async function detalle(){
+  const s=SOLS.find(x=>x.id===UI.sel),{n,a,c,aj,pct,umbral}=evaluar(s);
+  const izq=[...a.pend].sort((x,y)=>x.fecha.localeCompare(y.fecha)),der=[...s.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha)),v=izq.filter(p=>p.vencida).length;
+  let filas='';for(let i=0;i<Math.max(izq.length,v+der.length);i++){const l=izq[i],r=i>=v?der[i-v]:null;
+    filas+=`<tr><td class="${l&&l.vencida?'venc':''}">${l?dmy(l.fecha):''}</td><td class="der ${l&&l.vencida?'venc':''}">${l?num(l.valor):''}</td><td class="lado">${r?dmy(r.fecha):''}</td><td class="der">${r?num(r.valor):''}</td></tr>`}
+  if(a.credito>0)filas+=`<tr><td>Crédito</td><td class="der">${num(a.credito)}</td><td class="lado">Crédito</td><td class="der">${num(c.nuevoCred)}</td></tr>`;
+  const hash=await sha(cadenaFirma(s));
+  if(!document.getElementById('detalle')||UI.sel!==s.id)return;
+  const decision=s.estado==='pendiente'?`<div class="decision">${UI.devolviendo?`
+      <label for="com">¿Qué debe corregir el asesor?</label>
+      <div class="ayuda" id="com-ayuda">El comentario le llega al asesor junto con la propuesta.</div>
+      <textarea id="com" aria-describedby="com-ayuda">${esc(UI.texto)}</textarea>
+      <div class="btns" style="margin-top:12px"><button class="btn" data-act="devolver" type="button" ${UI.texto.trim().length<10?'disabled':''}>Devolver al asesor</button><button class="btn sec" data-act="cancelar" type="button">Cancelar</button></div>`
+    :`<div class="btns"><button class="btn" data-act="aprobar" type="button">Aprobar propuesta</button><button class="btn sec" data-act="pedir-dev" type="button">Devolver con comentario</button></div>`}</div>`:'';
+  const estado=s.estado==='aprobada'?`<div class="aviso ok"><p><b>Aprobada ${hace(s.decidida)}.</b> El asesor ya puede cargar el plan en IngeMAX.</p></div>`
+    :s.estado==='devuelta'?`<div class="aviso dev"><p><b>Devuelta ${hace(s.decidida)}.</b> ${esc(s.comentario)}</p></div>`:'';
+  $('#detalle').innerHTML=`<div class="pila">
+    <section class="card"><div class="cab-d"><div><h2 style="font-size:28px">${esc(n.inmueble)} · ${esc(n.comprador.nombre)}</h2><span class="sub">${esc(PROY[n.proyecto_id])} · Venta ${fmtM(n.valor_venta)} · ${s.id}</span></div>
+      <span class="chip"><span class="punto ${s.estado==='aprobada'?'ap':s.estado==='devuelta'?'dev':''}"></span>${s.estado==='pendiente'?'Pendiente':s.estado==='aprobada'?'Aprobada':'Devuelta'}</span></div>
+      ${estado}
+      <div class="motivo" style="margin-top:14px"><b>Por qué necesita tu aprobación</b>
+        <div class="cifras"><div><span>Descuento propuesto</span><strong>${fmt(-aj)}</strong></div><div><span>Equivale a</span><strong>${pctTxt(pct)} de la venta</strong></div><div><span>Umbral del proyecto</span><strong>${pctTxt(CFG.umbralPct)} (${fmt(umbral)})</strong></div></div>
+        ${c.ev.topado?`<p style="margin:10px 0 0;font-size:14px">El descuento calculado supera el tope y se limita a ${fmt(c.ev.tope)}.</p>`:''}</div></section>
+    <section class="card linea"><div class="fila-res"><span>El comprador ahorra</span><span class="cifra ahorro">${fmt(Math.abs(aj))}</span></div>
+      ${lineaSVG(a,s)}
+      <ul class="leyenda"><li><span class="sw pag"></span>Pagado</li><li><span class="sw act"></span>Plan actual</li><li><span class="sw pro"></span>Propuesta</li>${a.credito>0?'<li><span class="sw cre"></span>Crédito (recortado)</li>':''}</ul></section>
+    <section class="card"><table class="tabla"><thead><tr><th colspan="2">Plan actual</th><th colspan="2" class="lado">Propuesta</th></tr><tr><th>Fecha</th><th class="der">Valor</th><th class="lado">Fecha</th><th class="der">Valor</th></tr></thead><tbody>${filas}</tbody>
+      <tfoot><tr><td>Total</td><td class="der">${num(a.saldo+a.credito)}</td><td class="lado">Total</td><td class="der">${num(c.totProp+c.nuevoCred)}</td></tr></tfoot></table>
+      ${a.vencido>0?`<div class="aviso mora"><p><b>${fmt(a.vencido)} vencidos</b> (en rojo) se pagan en la primera cuota de la propuesta.</p></div>`:''}
+      ${c.excedente>0?`<div class="aviso cred"><p><b>El crédito pasa de ${fmt(n.valor_credito)} a ${fmt(c.nuevoCred)}.</b> El comprador debe informar al banco.</p></div>`:''}</section>
+    <section class="card"><h2>Firma del comprador</h2><dl class="datos"><div><dt>Firmante</dt><dd>${esc(n.comprador.nombre)}</dd></div><div><dt>Fecha</dt><dd>${fLarga(s.firmada)}</dd></div><div><dt>IP</dt><dd>${esc(s.ip)}</dd></div><div><dt>Código SHA-256</dt><dd class="mono">${hash.slice(0,16)}…</dd></div></dl></section>
+    ${decision}</div>`;
+  if(UI.devolviendo){const t=document.getElementById('com');if(t&&UI.foco){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}
+}
+
+/* ═══════════ EVENTOS ═══════════ */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab],[data-sel],[data-act]');if(!t)return;
+  if(t.dataset.tab){UI.tab=t.dataset.tab;UI.sel=null;UI.devolviendo=false;UI.texto='';return render()}
+  if(t.dataset.sel){UI.sel=t.dataset.sel;UI.devolviendo=false;UI.texto='';return render()}
+  const s=SOLS.find(x=>x.id===UI.sel);
+  switch(t.dataset.act){
+    case'aprobar':s.estado='aprobada';s.decidida=CORTE;toast('Propuesta aprobada. El asesor ya puede cargarla.');UI.devolviendo=false;render();break;
+    case'pedir-dev':UI.devolviendo=true;UI.foco=true;detalle();break;
+    case'cancelar':UI.devolviendo=false;UI.texto='';detalle();break;
+    case'devolver':if(UI.texto.trim().length<10)break;s.estado='devuelta';s.decidida=CORTE;s.comentario=UI.texto.trim();toast('Propuesta devuelta al asesor.');UI.devolviendo=false;UI.texto='';render();break}
+});
+document.addEventListener('input',e=>{if(e.target.id==='com'){UI.texto=e.target.value;const b=document.querySelector('[data-act=devolver]');if(b)b.disabled=UI.texto.trim().length<10}});
+render();
+</script>
+</body>
+</html>
