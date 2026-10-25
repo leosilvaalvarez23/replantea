@@ -29,7 +29,7 @@ App web para modificar planes de pagos de vivienda. Cliente inicial: VyP (IngeMA
 - Postgres 16-alpine → volumen `pgdata`
 - Caddy 2 → HTTPS automático vía sslip.io
 - fail2ban (jail sshd), swap 2GB (swappiness 10)
-- Superusuario admin: usuario `admin`, contraseña `Rpl2026admin!` — cambiar en /admin/
+- Superusuario admin: usuario `admin`. La contraseña NO se guarda aquí (estuvo expuesta en el repo público y debe rotarse); está en el gestor de contraseñas de Leonardo.
 
 ## Django apps
 - `usuarios` — Usuario(AbstractUser) + rol (administrador/gerente/asesor)
