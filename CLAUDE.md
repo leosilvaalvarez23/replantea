@@ -56,7 +56,7 @@ App web para que los compradores de proyectos de vivienda **modifiquen su plan d
 
 ## 3. Arquitectura decidida
 
-- Backend **Django 5 + Django Ninja** (endpoints JSON) + **PostgreSQL** propio + frontend a partir del prototipo.
+- Backend **Django + Django Ninja** (requirements pide `>=5.1`; hoy corre 6.1) (endpoints JSON) + **PostgreSQL** propio + frontend a partir del prototipo.
 - **Por qué Django Ninja y no FastAPI o DRF:**
   - Django Admin integrado = portal de proyectos (tasas, topes) y gestión de usuarios/roles sin construir UI adicional.
   - Django ya lo usa Ágora → mismo stack, misma experiencia operativa.
@@ -108,24 +108,34 @@ App web para que los compradores de proyectos de vivienda **modifiquen su plan d
 
 ## 5. Hecho / Pendientes
 
-### Completado (2026-10-20)
-- [x] Repositorio GitHub privado `replantea` → `github.com/leosilvaalvarez23/replantea`
-- [x] Motor `engine/engine.py` portado de JS a Python — 14 tests pasan (incl. caso Excel −6.925.145,36)
-- [x] Servidor pruebas listo: Docker, swap 2 GB, fail2ban, SSH solo llave
-- [x] MVP FastAPI desplegado en `https://replantea.2-31-84-237.sslip.io` (se reemplaza con Django)
+### Completado
+- [x] Repositorio GitHub `replantea` → `github.com/leosilvaalvarez23/replantea`. **Es PÚBLICO** (el CLAUDE.md anterior decía privado). No versionar secretos; la contraseña de `admin` estuvo publicada en el historial y debe rotarse.
+- [x] Motor `engine/engine.py` (14 tests) + análisis y validación `engine/analisis.py` (25 tests): FIFO, mora, vencido, crédito, excedente al crédito, validaciones. El servidor recalcula todo; el navegador nunca es la fuente de verdad.
+- [x] Backend Django + Ninja: apps `usuarios`, `proyectos`, `solicitudes`; **autenticación por sesión de Django** (cookie + CSRF, mismo dominio) con roles fijos; API de solicitudes, comprador por token, aprobaciones y proyectos. 35 tests de API.
+- [x] Diseño del frontend (prototipos con datos de demostración) en `prototipo/v2/`: simulador del comprador, bandeja y detalle del asesor, portal de proyectos y aprobaciones de gerencia.
+- [x] Servidor pruebas: Docker, swap 2 GB, fail2ban, SSH solo llave.
+
+### Cómo se prueba
+- Motor: `pytest engine/` (desde la raíz, con `PYTHONPATH=.`).
+- API: `cd backend && python manage.py test` (sqlite; IngeMAX y el correo se simulan).
+- En un PC sin Python se verificó ejecutando Python en el navegador con Pyodide (solo pruebas).
+
+### API (`/api/`)
+- Sesión: `GET auth/csrf`, `POST auth/login`, `POST auth/logout`, `GET auth/yo`. Las peticiones que modifican datos envían `X-CSRFToken`.
+- Asesor/gerente: `solicitudes` (listar, crear, `/{id}`, `enviar`, `reabrir`, `cargada`, `verificar`), `solicitudes/negocios/buscar`.
+- Gerente: `solicitudes/{id}/aprobar`, `solicitudes/{id}/devolver`, `PATCH proyectos/{id}`.
+- Comprador (sin sesión, por token): `comprador/{token}`, `/evaluar`, `/codigo`, `/firmar`. Las tasas nunca salen del servidor.
+- Estados: `borrador → pendiente_firma → (pendiente_aprobacion) → firmada/aprobada → cargada → verificada`; `rechazada` = devuelta por gerencia. Vencida = `pendiente_firma` con link vencido (7 días).
 
 ### Próximos pasos
-- [ ] Migrar backend a Django 5 + Django Ninja (reemplaza el MVP FastAPI)
-- [ ] App `proyectos`: modelo ProyectoConfig + admin (portal de proyectos con tasas)
-- [ ] App `usuarios`: modelo Usuario + roles fijos + admin
-- [ ] App `solicitudes`: modelo Solicitud + link comprador (reutilizable, cierra al firmar o vencer)
-- [ ] Endpoints Ninja: proxy IngeMAX, evaluar, comprador/token, auth JWT
-- [ ] Rediseño frontend con estilo SICO (azul-petróleo, cards limpias)
-- [ ] Firma electrónica: OTP correo, PDF, SHA-256, log auditoría
-- [ ] Regla de excedente → crédito
-- [ ] Con VyP: tasas por proyecto, días de gracia, conceptos exactos, usuarios, logo, textos legales
-- [ ] Con GERPRO: ¿endpoint modificar pagos pactados? ¿exponer tasa del proyecto?
-- [ ] Rotar token IngeMAX antes de producción
+- [ ] **Rotar la contraseña de `admin`** en el servidor (estuvo en el repo público) y el token de IngeMAX antes de producción
+- [ ] Conectar las pantallas de `prototipo/v2/` a la API (hoy usan datos de demostración): página de login, comprador, asesor, proyectos, aprobaciones
+- [ ] Desplegar y probar el flujo completo en el servidor de pruebas (las pantallas viejas `prototipo/replantea.html` y `config.html` ya no se sirven)
+- [ ] Correo real del OTP (Brevo/SMTP): en pruebas se muestra en pantalla (`OTP_MOSTRAR=1`); en producción `OTP_MOSTRAR=0`
+- [ ] PDF de la propuesta firmada; log de auditoría
+- [ ] Con VyP: tasas por proyecto, días de gracia (los define IngeMAX), conceptos exactos (¿el cargo usa el mismo concepto del descuento?), usuarios, textos legales
+- [ ] Con GERPRO: ¿endpoint para modificar pagos pactados? ¿exponer la tasa del proyecto? ¿el negocio trae el correo del cliente?
+- [ ] Verificar cómo representa IngeMAX la línea de ajuste (signo y concepto) para afinar `verificar`
 
 ## 6. Comercial (propuesta preliminar)
 - Implementación: COP 18–25 M. Suscripción: COP 1,2–1,8 M/mes por empresa (hasta 5 proyectos) o COP 350–500 mil por proyecto activo/mes.

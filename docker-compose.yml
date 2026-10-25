@@ -8,6 +8,8 @@ services:
       - DEBUG=${DEBUG:-0}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-replantea.2-31-84-237.sslip.io}
       - IMX_TOKEN=${IMX_TOKEN}
+      # Pruebas: muestra el código de firma en pantalla. En producción poner OTP_MOSTRAR=0 y configurar el SMTP (EMAIL_*).
+      - OTP_MOSTRAR=${OTP_MOSTRAR:-1}
       - DATABASE_URL=postgresql://replantea:${DB_PASSWORD}@db:5432/replantea
     depends_on:
       db:

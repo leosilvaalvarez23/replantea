@@ -95,3 +95,24 @@ STATICFILES_DIRS = [_PROTO] if _PROTO.exists() else []
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# --- Sesiones y seguridad (el frontend se sirve desde el mismo dominio) ---
+SESSION_COOKIE_AGE = 8 * 60 * 60            # una jornada
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+# Caddy termina HTTPS y reenvía por HTTP interno
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h and h != "*"]
+
+# --- Código de firma (OTP) por correo ---
+# En producción se envía por SMTP (Brevo). En pruebas se escribe en el log del
+# servidor y, si OTP_MOSTRAR=1, la API lo devuelve para mostrarlo en pantalla.
+OTP_MOSTRAR = os.environ.get("OTP_MOSTRAR", "0") == "1"
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Replantea <no-responder@replantea.local>")
