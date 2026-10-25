@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solicitudes · Viviendas y Proyectos</title>
+<link rel="icon" type="image/svg+xml" href="img/icono-vyp.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fondo:#EBF0F2;--papel:#FFFFFF;--tinta:#17262E;--pizarra:#174250;--gris:#898E91;--gris-suave:#C9D1D5;--linea:#D5DDE1;
+  --pagado:#A7B4BA;--propuesta:#3E87AA;--credito:#6F8794;
+  --ahorro:#2F7D32;--ahorro-fondo:#E4F1E3;--sobre:#8E2450;--sobre-fondo:#F6E4EC;--ambar:#8A5A00;--ambar-fondo:#FBF0D5;
+  --radio-g:18px;--radio-m:10px;--radio-p:6px;
+  --f-texto:'Onest',system-ui,sans-serif;--f-marca:'Barlow Condensed','Arial Narrow',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);font:400 15px/1.5 var(--f-texto);font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--pizarra);outline-offset:2px;border-radius:var(--radio-p)}
+a{color:var(--pizarra)}
+h1,h2,h3{margin:0}
+h1{font:700 32px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
+h2{font:700 22px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
+
+/* barra superior */
+.top{background:var(--papel);border-bottom:1px solid var(--linea)}
+.top .in{max-width:1180px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:32px}
+.logo{height:42px;display:block}
+.nav{display:flex;gap:4px}
+.nav a{padding:8px 14px;border-radius:var(--radio-m);text-decoration:none;font-weight:500;color:#41545D}
+.nav a[aria-current=page]{background:var(--fondo);color:var(--pizarra)}
+.top .user{margin-left:auto;font-size:14px;color:#52646C}
+.demo{background:var(--ambar-fondo);color:var(--ambar);font-size:13px;text-align:center;padding:6px 12px}
+
+main{max-width:1180px;margin:0 auto;padding:28px 24px 64px;display:grid;gap:20px}
+.cab{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cab p{margin:6px 0 0;color:#41545D}
+.btn{min-height:44px;padding:0 20px;border-radius:var(--radio-m);border:0;background:var(--pizarra);color:#fff;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:#0F3340}
+.btn:disabled{background:var(--gris-suave);color:#5B6B72;cursor:not-allowed}
+.btn.sec{background:var(--papel);color:var(--pizarra);border:2px solid var(--pizarra)}
+.btn.sec:hover:not(:disabled){background:var(--fondo)}
+.txt-btn{background:none;border:0;padding:6px 4px;color:var(--pizarra);font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.card{background:var(--papel);border-radius:var(--radio-g);padding:22px}
+
+/* bandeja */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:2px solid var(--linea)}
+.tabs button{background:none;border:0;padding:10px 14px;margin-bottom:-2px;border-bottom:3px solid transparent;color:#41545D;font-weight:500;cursor:pointer}
+.tabs button[aria-selected=true]{color:var(--pizarra);border-bottom-color:var(--pizarra);font-weight:600}
+.tabs .n{color:#52646C;font-weight:400;margin-left:4px}
+.buscar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.buscar input{width:min(420px,100%);min-height:44px;padding:8px 14px;border:1.5px solid var(--linea);border-radius:var(--radio-m);background:var(--papel)}
+.tabla{width:100%;border-collapse:collapse;background:var(--papel);border-radius:var(--radio-g);overflow:hidden}
+.tabla th{text-align:left;font-size:13px;font-weight:500;color:#52646C;padding:14px 16px;border-bottom:2px solid var(--pizarra)}
+.tabla td{padding:14px 16px;border-bottom:1px solid var(--linea);vertical-align:middle}
+.tabla tbody tr{cursor:pointer}
+.tabla tbody tr:hover{background:#F4F8F9}
+.tabla tbody tr:last-child td{border-bottom:0}
+.der,.tabla th.der,.carga th.der{text-align:right}
+.sub{display:block;font-size:13px;color:#52646C}
+.t-link{font-weight:600;color:var(--tinta);text-decoration:none}
+.t-link:hover{text-decoration:underline}
+.ahorro{color:var(--ahorro);font-weight:600}
+.sobre{color:var(--sobre);font-weight:600}
+.estado{display:flex;align-items:center;gap:8px}
+.punto{width:10px;height:10px;border-radius:50%;flex:none;background:var(--gris)}
+.punto.enviada{background:var(--propuesta)}.punto.por_aprobar{background:#C58A12}.punto.por_cargar{background:var(--pizarra);box-shadow:0 0 0 3px #17425033}
+.punto.cargada{background:#C58A12}.punto.verificada{background:var(--ahorro)}.punto.vencida{background:var(--sobre)}
+.vacio{padding:40px 16px;text-align:center;color:#52646C}
+
+/* detalle */
+.migas{font-size:14px}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start}
+.pila{display:grid;gap:20px}
+.fila-res{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.fila-res .cifra{font-size:40px;font-weight:300;letter-spacing:-.02em;line-height:1.1}
+.fila-res.ahorro .cifra,.fila-res .cifra.ahorro{color:var(--ahorro)}
+.fila-res .cifra.sobre{color:var(--sobre)}
+.linea svg{width:100%;height:auto;max-height:230px;display:block;overflow:visible}
+.leyenda{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 0;padding:0;list-style:none;font-size:13px;color:#41545D}
+.leyenda li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:10px;border-radius:2px;display:inline-block}
+.sw.pag{background:var(--pagado)}.sw.act{border:2px dashed var(--tinta)}.sw.pro{background:var(--propuesta)}.sw.cre{background:var(--credito)}
+.comp{font-size:14.5px}
+.comp th{font-weight:500}
+.comp .lado{border-left:1px solid var(--linea)}
+.comp .venc{color:var(--sobre);font-weight:500}
+.comp tfoot td{font-weight:600}
+.comp thead tr:first-child th{font:700 18px/1.2 var(--f-marca);color:var(--pizarra);border-bottom:0;padding-bottom:6px}
+.aviso{border-radius:var(--radio-m);padding:12px 14px;font-size:14px}
+.aviso p{margin:0}.aviso p+p{margin-top:4px}
+.aviso.mora{background:var(--sobre-fondo);color:#5A1735}
+.aviso.cred{background:var(--ambar-fondo);color:var(--ambar)}
+.aviso.ok{background:var(--ahorro-fondo);color:#1D5A20}
+.aviso.err{background:var(--papel);border:1.5px solid var(--sobre);color:#5A1735}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 10px;border-radius:999px;background:var(--papel);font-weight:500;font-size:14px}
+.accion h2{margin-bottom:10px}
+.accion p{margin:0 0 12px}
+.accion .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.link-box{display:flex;gap:8px}
+.link-box input{flex:1;min-width:0;min-height:44px;padding:8px 12px;border:1.5px solid var(--linea);border-radius:var(--radio-m);background:#F8FAFB;font-size:14px}
+.prueba{margin-top:14px;padding-top:12px;border-top:1px dashed var(--gris-suave);font-size:13px;color:#52646C}
+.carga{width:100%;border-collapse:collapse;font-size:14px;margin-top:4px}
+.carga th{text-align:left;font-size:12.5px;font-weight:500;color:#52646C;padding:6px 6px;border-bottom:2px solid var(--pizarra)}
+.carga td{padding:8px 6px;border-bottom:1px solid var(--linea);vertical-align:middle}
+.carga .cp{padding:2px 6px;min-height:0;font-size:13px}
+.carga tr.ajuste td{background:#F4F8F9}
+.verif li{list-style:none;display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--linea);font-size:14px}
+.verif{margin:10px 0 0;padding:0}
+.verif .si{color:var(--ahorro);font-weight:700}.verif .no{color:var(--sobre);font-weight:700}
+.tiempo{margin:10px 0 0;padding:0;list-style:none}
+.tiempo li{position:relative;padding:0 0 16px 26px;font-size:14.5px;color:#52646C}
+.tiempo li::before{content:"";position:absolute;left:5px;top:5px;width:12px;height:12px;border-radius:50%;border:2px solid var(--gris-suave);background:var(--papel)}
+.tiempo li::after{content:"";position:absolute;left:10px;top:19px;bottom:-5px;width:2px;background:var(--linea)}
+.tiempo li:last-child::after{display:none}
+.tiempo li.hecho{color:var(--tinta)}
+.tiempo li.hecho::before{background:var(--pizarra);border-color:var(--pizarra)}
+.tiempo li.actual{color:var(--tinta);font-weight:600}
+.tiempo li.actual::before{border-color:var(--pizarra);border-width:3px}
+.tiempo small{display:block;font-weight:400;color:#52646C}
+.datos{margin:8px 0 0;display:grid}
+.datos div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--linea)}
+.datos div:first-child{border-top:0}
+.datos dt{color:#52646C;font-size:14px}.datos dd{margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px}
+/* nueva solicitud */
+.form{display:grid;gap:16px;max-width:640px}
+.campo{display:grid;gap:4px}
+.campo label{font-size:13.5px;color:#41545D;font-weight:500}
+.campo input,.campo select{min-height:46px;padding:8px 12px;border:1.5px solid var(--linea);border-radius:var(--radio-m);background:var(--papel)}
+.res-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.res-list button{width:100%;text-align:left;background:var(--papel);border:1.5px solid var(--linea);border-radius:var(--radio-m);padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}
+.res-list button[aria-pressed=true]{border-color:var(--pizarra);box-shadow:inset 0 0 0 1px var(--pizarra)}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 18px;border-radius:var(--radio-m);font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+.toast.on{opacity:1}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media(max-width:1000px){.cols{grid-template-columns:1fr}.top .in{gap:16px;padding:10px 16px}main{padding:20px 16px 48px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="demo">Datos de demostración: nada de lo que hagas aquí llega a IngeMAX ni al servidor.</div>
+<header class="top"><div class="in">
+  <a href="#/"><img class="logo" src="img/logo-vyp.svg" alt="Viviendas y Proyectos, bien hechos"></a>
+  <nav class="nav" aria-label="Principal"><a href="#/" aria-current="page">Solicitudes</a></nav>
+  <span class="user">Asesor (demo)</span>
+</div></header>
+<main id="app"></main>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="motor.js"></script>
+<script>
+/* ═══════════ DATOS DE DEMOSTRACIÓN ═══════════ */
+const CFG={metodo:'liquidacion',tasaCia:0.006,tasaCliente:0.01,tasaVpn:0.008,topePct:0.03,umbralPct:0.012,cuotaMin:1000000,conceptoAbono:'Abono extraordinario',conceptoDesc:'Descuento financiero plan de pagos',conceptoCargo:'Cargo financiero plan de pagos'};
+const PROYECTOS=[{id:1,nombre:'Pruebas'},{id:7,nombre:'Vida Park (demo)'},{id:15,nombre:'Mirador del Valle (demo)'}];
+const nomProy=id=>(PROYECTOS.find(p=>p.id===id)||{}).nombre||'';
+const cuotas=(n,desde,dia,valor,concepto='Recursos Propios',extra=()=>({}))=>Array.from({length:n},(_,i)=>({fecha_pp:addM(desde+i,dia),concepto,valor,...extra(i)}));
+const pagos=(n,desde,dia,valor,concepto='Recursos Propios')=>Array.from({length:n},(_,i)=>({fecha:addM(desde+i,dia),concepto,valor}));
+const NEGOCIOS=[
+  {id_venta:1974,proyecto_id:1,inmueble:'T1 - 602',comprador:{nombre:'Comprador demo uno',documento:'1.000.000.001',correo:'uno@ejemplo.co'},valor_venta:487500000,valor_credito:341250000,fecha_escrituracion_programada:'1900-01-01',
+    plan_pagos:cuotas(15,-9,28,9750000,'Recursos Propios',i=>({int_mora:i<9?180000:0,int_aplicado:i<5?1:(i===5?0:(i===6?60000:0))})),
+    recaudo:[...pagos(5,-9,28,10000000),{fecha:addM(-4,28),concepto:'Recursos Propios',valor:10400000}]},
+  {id_venta:2502,proyecto_id:7,inmueble:'T2 - AP-504',comprador:{nombre:'Comprador demo dos',documento:'1.000.000.002',correo:'dos@ejemplo.co'},valor_venta:412000000,valor_credito:294000000,fecha_escrituracion_programada:addM(13,20),
+    plan_pagos:[{fecha_pp:addM(-12,5),concepto:'Separacion',valor:10000000},...cuotas(24,-11,5,4500000,'Cuota inicial')],
+    recaudo:[{fecha:addM(-12,5),concepto:'Separacion',valor:10000000},...pagos(8,-11,6,4500000)]},
+  {id_venta:3107,proyecto_id:15,inmueble:'C - CASA-12',comprador:{nombre:'Comprador demo tres',documento:'1.000.000.003',correo:'tres@ejemplo.co'},valor_venta:280500000,valor_credito:168300000,fecha_escrituracion_programada:addM(11,30),
+    plan_pagos:[{fecha_pp:addM(-6,15),concepto:'Separacion',valor:5000000},...cuotas(16,-5,15,6700000,'Cuota inicial')],
+    recaudo:[{fecha:addM(-6,15),concepto:'Separacion',valor:5000000},...pagos(5,-5,14,6700000)]},
+  {id_venta:2610,proyecto_id:7,inmueble:'T1 - AP-301',comprador:{nombre:'Comprador demo cuatro',documento:'1.000.000.004',correo:'cuatro@ejemplo.co'},valor_venta:355000000,valor_credito:248500000,fecha_escrituracion_programada:addM(10,25),
+    plan_pagos:cuotas(12,-3,10,5900000,'Cuota inicial'),recaudo:pagos(3,-3,10,5900000)},
+  {id_venta:3220,proyecto_id:15,inmueble:'B - CASA-07',comprador:{nombre:'Comprador demo cinco',documento:'1.000.000.005',correo:'cinco@ejemplo.co'},valor_venta:301000000,valor_credito:180600000,fecha_escrituracion_programada:addM(9,15),
+    plan_pagos:cuotas(10,-2,20,6000000,'Cuota inicial'),recaudo:pagos(2,-2,20,6000000)},
+  {id_venta:2755,proyecto_id:7,inmueble:'T3 - AP-1102',comprador:{nombre:'Comprador demo seis',documento:'1.000.000.006',correo:'seis@ejemplo.co'},valor_venta:520000000,valor_credito:364000000,fecha_escrituracion_programada:addM(14,30),
+    plan_pagos:cuotas(18,-4,5,8600000,'Cuota inicial'),recaudo:pagos(4,-4,5,8600000)}
+];
+const neg=id=>NEGOCIOS.find(n=>n.id_venta===id);
+
+// variantes de propuesta para que la bandeja tenga resultados distintos
+function variante(prop,tipo){
+  const p=prop.map(x=>({...x}));
+  if(tipo==='adelanto'&&p.length>3){const ult=p.splice(-3);p[1].valor+=ult.reduce((s,x)=>s+x.valor,0);p[1].fijo=true}
+  if(tipo==='aplaza'&&p.length>2){const u=p[p.length-1];const d=new Date(u.fecha+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+2);u.fecha=iso(d)}
+  return p;
+}
+const dia=(k)=>{const d=new Date(CORTE+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+k);return iso(d)};
+const SOLS=[];
+function crearSol(n,estado,tipo,extra={}){
+  const a=analizar(n);const prop=variante(initPropuesta(a),tipo);
+  const s={id:'SOL-'+(1001+SOLS.length),negId:n.id_venta,estado,propuesta:prop,creada:dia(-12),eventos:[],...extra};
+  SOLS.unshift(s);return s;
+}
+const ev=(t,f)=>({t,f});
+crearSol(neg(2502),'verificada','adelanto',{creada:dia(-30),eventos:[ev('creada',dia(-30)),ev('enviada',dia(-30)),ev('firmada',dia(-27)),ev('cargada',dia(-24)),ev('verificada',dia(-23))]});
+crearSol(neg(3107),'cargada','adelanto',{creada:dia(-9),demoDiff:true,eventos:[ev('creada',dia(-9)),ev('enviada',dia(-9)),ev('firmada',dia(-6)),ev('cargada',dia(-1))]});
+crearSol(neg(2610),'por_cargar','adelanto',{creada:dia(-6),eventos:[ev('creada',dia(-6)),ev('enviada',dia(-6)),ev('firmada',dia(-2))]});
+crearSol(neg(1974),'por_aprobar','adelanto',{creada:dia(-5),eventos:[ev('creada',dia(-5)),ev('enviada',dia(-5)),ev('firmada',dia(-1))]});
+crearSol(neg(3220),'enviada','aplaza',{creada:dia(-3),vence:dia(4),token:'k3j9x2m1q8',eventos:[ev('creada',dia(-3)),ev('enviada',dia(-3))]});
+crearSol(neg(2755),'borrador','igual',{creada:dia(-1),eventos:[ev('creada',dia(-1))]});
+SOLS.reverse();SOLS.forEach((s,i)=>s.id='SOL-'+(1001+i));SOLS.reverse();
+
+/* ═══════════ CÁLCULO POR SOLICITUD ═══════════ */
+function evaluar(s){const n=neg(s.negId),a=analizar(n);return{n,a,c:calc(s,a,n,CFG)}}
+const ESTADOS={
+  borrador:{t:'Borrador',d:'Sin enviar'},enviada:{t:'Enviada al comprador',d:''},por_aprobar:{t:'Por aprobar',d:'Gerencia'},
+  por_cargar:{t:'Por cargar en IngeMAX',d:''},cargada:{t:'Cargada, por verificar',d:''},verificada:{t:'Verificada',d:''},vencida:{t:'Link vencido',d:''}};
+const FILTROS=[['todas','Todas'],['borrador','Borrador'],['enviada','Enviadas'],['por_aprobar','Por aprobar'],['por_cargar','Por cargar'],['cargada','Por verificar'],['verificada','Verificadas']];
+const diasPara=f=>Math.round((Date.parse(f+'T12:00:00Z')-Date.parse(CORTE+'T12:00:00Z'))/86400000);
+const resTxt=c=>{const aj=c.ev.ajuste;return aj<=-1?`<span class="ahorro">Ahorra ${fmt(-aj)}</span>`:aj>=1?`<span class="sobre">Paga ${fmt(aj)} de más</span>`:'Sin cambio'};
+const detalleEstado=s=>s.estado==='enviada'&&s.vence?`Vence ${diasPara(s.vence)<=0?'hoy':'en '+diasPara(s.vence)+' día'+(diasPara(s.vence)===1?'':'s')}`:ESTADOS[s.estado].d;
+
+/* ═══════════ ESTADO DE LA INTERFAZ ═══════════ */
+const UI={filtro:'todas',q:'',nueva:{proyecto:1,q:'',sel:null},verif:{}};
+
+/* ═══════════ BANDEJA ═══════════ */
+function vistaBandeja(){
+  const cuenta=f=>f==='todas'?SOLS.length:SOLS.filter(s=>s.estado===f).length;
+  const porCargar=cuenta('por_cargar'),porVer=cuenta('cargada');
+  const frase=porCargar+porVer===0?'No tienes cargas ni verificaciones pendientes.'
+    :[porCargar?`${porCargar} por cargar en IngeMAX`:'',porVer?`${porVer} por verificar`:''].filter(Boolean).join(' y ').replace(/^/,'Tienes ')+'.';
+  const q=UI.q.trim().toLowerCase();
+  const lista=SOLS.filter(s=>(UI.filtro==='todas'||s.estado===UI.filtro)).map(s=>({s,...evaluar(s)}))
+    .filter(x=>!q||[x.n.inmueble,x.n.comprador.nombre,x.n.comprador.documento,nomProy(x.n.proyecto_id),x.s.id].join(' ').toLowerCase().includes(q));
+  const filas=lista.map(({s,n,c})=>`<tr data-id="${s.id}" tabindex="0">
+    <td><a class="t-link" href="#/s/${s.id}">${esc(n.inmueble)}</a><span class="sub">${esc(nomProy(n.proyecto_id))}</span></td>
+    <td>${esc(n.comprador.nombre)}<span class="sub">${esc(n.comprador.documento)}</span></td>
+    <td class="der">${resTxt(c)}</td>
+    <td><span class="estado"><span class="punto ${s.estado}"></span><span>${ESTADOS[s.estado].t}<span class="sub">${esc(detalleEstado(s))}</span></span></span></td>
+    <td class="der"><span class="sub">${s.id}</span></td></tr>`).join('');
+  $('#app').innerHTML=`
+  <div class="cab"><div><h1>Solicitudes</h1><p>${frase}</p></div><button class="btn" data-act="nueva" type="button">Nueva solicitud</button></div>
+  <div class="tabs" role="tablist" aria-label="Filtrar por estado">${FILTROS.map(([k,t])=>`<button role="tab" aria-selected="${UI.filtro===k}" data-f="${k}" type="button">${t}<span class="n">${cuenta(k)}</span></button>`).join('')}</div>
+  <div class="buscar"><label class="sr" for="q">Buscar</label><input id="q" type="search" placeholder="Buscar por inmueble, comprador o documento" value="${esc(UI.q)}"></div>
+  ${lista.length?`<table class="tabla"><thead><tr><th scope="col">Inmueble</th><th scope="col">Comprador</th><th scope="col" class="der">Resultado de la propuesta</th><th scope="col">Estado</th><th scope="col"><span class="sr">Solicitud</span></th></tr></thead><tbody>${filas}</tbody></table>`
+    :`<div class="card vacio"><p>No hay solicitudes con ese filtro.</p><button class="txt-btn" data-act="limpiar" type="button">Ver todas</button></div>`}`;
+  const q2=$('#q');if(UI.enfocarQ){q2.focus();q2.setSelectionRange(q2.value.length,q2.value.length);UI.enfocarQ=false}
+}
+
+/* ═══════════ NUEVA SOLICITUD ═══════════ */
+function vistaNueva(){
+  const N=UI.nueva,q=N.q.trim().toLowerCase();
+  const abiertas=new Set(SOLS.filter(s=>!['verificada','vencida'].includes(s.estado)).map(s=>s.negId));
+  const cand=NEGOCIOS.filter(n=>n.proyecto_id===Number(N.proyecto)&&(!q||[n.inmueble,n.comprador.nombre,n.comprador.documento].join(' ').toLowerCase().includes(q)));
+  const sel=N.sel?neg(N.sel):null,a=sel?analizar(sel):null;
+  $('#app').innerHTML=`
+  <p class="migas"><a href="#/">← Solicitudes</a></p>
+  <div class="cab"><h1>Nueva solicitud</h1></div>
+  <div class="form card">
+    <div class="campo"><label for="proy">Proyecto</label><select id="proy">${PROYECTOS.map(p=>`<option value="${p.id}" ${p.id===Number(N.proyecto)?'selected':''}>${esc(p.nombre)}</option>`).join('')}</select></div>
+    <div class="campo"><label for="nq">Buscar negocio por inmueble, comprador o documento</label><input id="nq" type="search" value="${esc(N.q)}"></div>
+    ${cand.length?`<ul class="res-list">${cand.map(n=>{const ab=abiertas.has(n.id_venta);return`<li><button type="button" data-sel="${n.id_venta}" aria-pressed="${N.sel===n.id_venta}" ${ab?'disabled':''}><span><b>${esc(n.inmueble)}</b> · ${esc(n.comprador.nombre)}<span class="sub">Documento ${esc(n.comprador.documento)}</span></span><span class="sub">${ab?'Ya tiene una solicitud abierta':'Venta '+fmtM(n.valor_venta)}</span></button></li>`}).join('')}</ul>`:'<p class="sub">No encontramos negocios con esa búsqueda.</p>'}
+    ${sel?`<dl class="datos"><div><dt>Valor de venta</dt><dd>${fmt(sel.valor_venta)}</dd></div><div><dt>Ya pagado</dt><dd>${fmt(a.totRec)}</dd></div><div><dt>Pendiente de cuota inicial</dt><dd>${fmt(a.saldo)}</dd></div><div><dt>Vencido</dt><dd>${fmt(a.vencido)}</dd></div><div><dt>Crédito hipotecario</dt><dd>${fmt(sel.valor_credito)}</dd></div></dl>`:''}
+    <div><button class="btn" data-act="crear" type="button" ${sel?'':'disabled'}>Crear solicitud</button></div>
+  </div>`;
+}
+
+/* ═══════════ DETALLE ═══════════ */
+const PASOS=[['creada','Solicitud creada'],['enviada','Link enviado al comprador'],['firmada','Firmada por el comprador'],['aprobada','Aprobada por gerencia'],['cargada','Cargada en IngeMAX'],['verificada','Verificada contra IngeMAX']];
+function lineasCarga(s,c){
+  const out=[...s.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha)).map(p=>({concepto:p.concepto,fecha:p.fecha,valor:Math.round(p.valor)}));
+  const aj=c.ev.ajuste;
+  if(Math.abs(aj)>=1)out.push({concepto:aj<0?CFG.conceptoDesc:CFG.conceptoCargo,fecha:CORTE,valor:aj,ajuste:true});
+  return out;
+}
+function vistaDetalle(id){
+  const s=SOLS.find(x=>x.id===id);if(!s){$('#app').innerHTML='<div class="card vacio"><p>No encontramos esa solicitud.</p><a href="#/">Volver a solicitudes</a></div>';return}
+  const {n,a,c}=evaluar(s),aj=c.ev.ajuste,tipo=aj<=-1?'ahorro':aj>=1?'sobre':'';
+  const izq=[...a.pend].sort((x,y)=>x.fecha.localeCompare(y.fecha)),der=[...s.propuesta].sort((x,y)=>x.fecha.localeCompare(y.fecha)),v=izq.filter(p=>p.vencida).length;
+  let filas='';for(let i=0;i<Math.max(izq.length,v+der.length);i++){const l=izq[i],r=i>=v?der[i-v]:null;
+    filas+=`<tr><td class="${l&&l.vencida?'venc':''}">${l?dmy(l.fecha):''}</td><td class="der ${l&&l.vencida?'venc':''}">${l?num(l.valor):''}</td><td class="lado">${r?dmy(r.fecha):''}</td><td class="der">${r?num(r.valor):''}</td></tr>`}
+  if(a.credito>0)filas+=`<tr><td>Crédito</td><td class="der">${num(a.credito)}</td><td class="lado">Crédito</td><td class="der">${num(c.nuevoCred)}</td></tr>`;
+  const orden={creada:0,enviada:1,firmada:2,aprobada:3,cargada:4,verificada:5};
+  const hechos=new Set(s.eventos.map(e=>e.t));if(['por_cargar','cargada','verificada'].includes(s.estado)&&c.ev.requiereAprobacion)hechos.add('aprobada');
+  const pasos=PASOS.filter(([k])=>k!=='aprobada'||c.ev.requiereAprobacion);
+  const sig=pasos.find(([k])=>!hechos.has(k));
+  const tiempo=pasos.map(([k,t])=>{const e=s.eventos.find(x=>x.t===k);const cls=hechos.has(k)?'hecho':(sig&&sig[0]===k?'actual':'');
+    return`<li class="${cls}">${t}${e?`<small>${fLarga(e.f)}</small>`:''}</li>`}).join('');
+  const url=`${location.origin||'https://replantea.example'}/comprador/${s.token||'—'}`;
+  let accion='';
+  if(s.estado==='borrador')accion=`<h2>Falta enviar al comprador</h2><p>Genera el link para que el comprador revise y firme. Vence a los 7 días.</p><div class="btns"><button class="btn" data-act="generar" type="button">Generar link</button></div>`;
+  if(s.estado==='enviada')accion=`<h2>Esperando la firma del comprador</h2><p>Comparte este link. Vence el ${fLarga(s.vence)}.</p><div class="link-box"><input readonly value="${esc(url)}" aria-label="Link del comprador"><button class="btn sec" data-act="copiar-link" type="button">Copiar</button></div>
+    <div class="prueba">Solo en pruebas: <button class="txt-btn" data-act="sim-firma" type="button">Simular que el comprador firmó</button></div>`;
+  if(s.estado==='por_aprobar')accion=`<h2>Esperando a gerencia</h2><p>El descuento supera el umbral del proyecto (${fmt(Math.round(n.valor_venta*CFG.umbralPct))}), así que gerencia debe aprobarlo antes de que cargues el plan.</p>
+    <div class="prueba">Solo en pruebas: <button class="txt-btn" data-act="sim-aprob" type="button">Simular aprobación de gerencia</button></div>`;
+  if(s.estado==='por_cargar'){const L=lineasCarga(s,c);
+    accion=`<h2>Carga el plan en IngeMAX</h2><p>Usa estos conceptos tal cual: deben coincidir exactamente.</p>
+    <table class="carga"><thead><tr><th>Concepto</th><th>Fecha</th><th class="der">Valor</th><th><span class="sr">Copiar</span></th></tr></thead><tbody>${L.map((l,i)=>`<tr class="${l.ajuste?'ajuste':''}"><td>${esc(l.concepto)}</td><td>${dmy(l.fecha)}</td><td class="der">${l.valor<0?'−':''}${num(l.valor)}</td><td class="der"><button class="txt-btn cp" data-copia="${i}" type="button" aria-label="Copiar línea ${i+1}">Copiar</button></td></tr>`).join('')}</tbody></table>
+    ${c.excedente>0?`<div class="aviso cred" style="margin-top:12px"><p><b>Actualiza también el crédito:</b> de ${fmt(n.valor_credito)} a ${fmt(c.nuevoCred)}.</p></div>`:''}
+    <div class="btns"><button class="btn sec" data-act="copiar-todo" type="button">Copiar todas las líneas</button><button class="btn" data-act="cargado" type="button">Ya la cargué en IngeMAX</button></div>`}
+  if(s.estado==='cargada'){const V=UI.verif[s.id];
+    accion=`<h2>Verifica contra IngeMAX</h2><p>Comparamos el plan que cargaste con lo que firmó el comprador.</p><div class="btns"><button class="btn" data-act="verificar" type="button">${V?'Volver a verificar':'Verificar ahora'}</button></div>
+    ${V?(V.ok?`<div class="aviso ok" style="margin-top:12px"><p><b>Todo coincide.</b></p></div>`:`<div class="aviso err" style="margin-top:12px" role="alert"><p><b>Hay ${V.dif} diferencia${V.dif===1?'':'s'}.</b> Corrígelas en IngeMAX y vuelve a verificar.</p></div>`)+`<ul class="verif">${V.items.map(i=>`<li><span class="${i.ok?'si':'no'}">${i.ok?'✓':'✕'}</span><span>${dmy(i.fecha)} · ${esc(i.concepto)} · esperado ${fmt(i.valor)}${i.ok?'':`, en IngeMAX ${fmt(i.visto)}`}</span></li>`).join('')}</ul>`:''}`}
+  if(s.estado==='verificada')accion=`<h2>Solicitud cerrada</h2><div class="aviso ok"><p>El plan cargado en IngeMAX coincide con lo que firmó el comprador.</p></div>`;
+  if(s.estado==='vencida')accion=`<h2>El link venció</h2><p>El comprador no firmó a tiempo.</p><div class="btns"><button class="btn" data-act="generar" type="button">Generar link nuevo</button></div>`;
+  const firma=s.firma?`<section class="card"><h2>Firma del comprador</h2><dl class="datos"><div><dt>Firmante</dt><dd>${esc(n.comprador.nombre)}</dd></div><div><dt>Fecha</dt><dd>${fLarga(s.firma.fecha)}</dd></div><div><dt>IP</dt><dd>${esc(s.firma.ip)}</dd></div><div><dt>Código SHA-256</dt><dd class="mono">${esc(s.firma.hash.slice(0,16))}…</dd></div></dl></section>`:'';
+  $('#app').innerHTML=`
+  <p class="migas"><a href="#/">← Solicitudes</a></p>
+  <div class="cab"><div><h1>${esc(n.inmueble)} · ${esc(n.comprador.nombre)}</h1><p>${esc(nomProy(n.proyecto_id))} · Venta ${fmtM(n.valor_venta)} · ${s.id}</p></div>
+    <span class="chip"><span class="punto ${s.estado}"></span>${ESTADOS[s.estado].t}</span></div>
+  <div class="cols"><div class="pila">
+    <section class="card linea"><div class="fila-res"><span>${tipo==='ahorro'?'El comprador ahorra':tipo==='sobre'?'El comprador paga de más':'Sin cambio en el valor'}</span>${tipo?`<span class="cifra ${tipo}">${fmt(Math.abs(aj))}</span>`:''}</div>
+      ${lineaSVG(a,s)}
+      <ul class="leyenda"><li><span class="sw pag"></span>Pagado</li><li><span class="sw act"></span>Plan actual</li><li><span class="sw pro"></span>Propuesta</li>${a.credito>0?'<li><span class="sw cre"></span>Crédito (recortado)</li>':''}</ul></section>
+    <section class="card"><table class="tabla comp"><thead><tr><th colspan="2">Plan actual</th><th colspan="2" class="lado">Propuesta</th></tr><tr><th scope="col">Fecha</th><th scope="col" class="der">Valor</th><th scope="col" class="lado">Fecha</th><th scope="col" class="der">Valor</th></tr></thead><tbody>${filas}</tbody>
+      <tfoot><tr><td>Total</td><td class="der">${num(a.saldo+a.credito)}</td><td class="lado">Total</td><td class="der">${num(c.totProp+c.nuevoCred)}</td></tr></tfoot></table>
+      ${a.vencido>0?`<div class="aviso mora" style="margin-top:14px"><p><b>${fmt(a.vencido)} vencidos</b> (en rojo) se pagan en la primera cuota de la propuesta.${a.mora>0?` Mora causada ${fmt(a.mora)}: la liquida IngeMAX aparte.`:''}</p></div>`:''}
+      ${c.excedente>0?`<div class="aviso cred" style="margin-top:10px"><p><b>El crédito pasa de ${fmt(n.valor_credito)} a ${fmt(c.nuevoCred)}.</b> El comprador debe informar al banco.</p></div>`:''}</section>
+  </div><div class="pila">
+    <section class="card accion">${accion}</section>
+    <section class="card"><h2>Avance</h2><ol class="tiempo">${tiempo}</ol></section>
+    ${firma}
+  </div></div>`;
+}
+
+/* ═══════════ ACCIONES ═══════════ */
+function evento(s,t){s.eventos.push({t,f:CORTE})}
+async function copiar(txt,msg){try{await navigator.clipboard.writeText(txt);toast(msg)}catch(e){toast('No se pudo copiar. Selecciónalo y cópialo a mano.')}}
+function nuevoToken(){return Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>b.toString(36).padStart(2,'0')).join('').slice(0,12)}
+async function sha(txt){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return 'sin-sha256-'+txt.length}}
+const sol=()=>SOLS.find(s=>s.id===(location.hash.match(/#\/s\/(.+)/)||[])[1]);
+
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-act],[data-f],[data-sel],[data-copia],tbody tr[data-id]');if(!t)return;
+  if(t.dataset.f){UI.filtro=t.dataset.f;return render()}
+  if(t.dataset.sel){UI.nueva.sel=Number(t.dataset.sel);return render()}
+  if(t.matches('tr[data-id]')){if(e.target.closest('a'))return;location.hash='#/s/'+t.dataset.id;return}
+  const s=sol();
+  if(t.dataset.copia!==undefined&&s){const {c}=evaluar(s),l=lineasCarga(s,c)[Number(t.dataset.copia)];return copiar(`${l.concepto}\t${dmy(l.fecha)}\t${l.valor}`,'Línea copiada.')}
+  switch(t.dataset.act){
+    case'nueva':location.hash='#/nueva';break;
+    case'limpiar':UI.filtro='todas';UI.q='';render();break;
+    case'crear':{const n=neg(UI.nueva.sel);if(!n)break;const a=analizar(n);
+      const ns={id:'SOL-'+(1001+SOLS.length),negId:n.id_venta,estado:'borrador',propuesta:initPropuesta(a),creada:CORTE,eventos:[{t:'creada',f:CORTE}]};
+      SOLS.unshift(ns);UI.nueva={proyecto:UI.nueva.proyecto,q:'',sel:null};toast('Solicitud creada.');location.hash='#/s/'+ns.id;break}
+    case'generar':s.token=nuevoToken();s.vence=dia(7);s.estado='enviada';evento(s,'enviada');toast('Link generado.');render();break;
+    case'copiar-link':copiar(`${location.origin}/comprador/${s.token}`,'Link copiado.');break;
+    case'sim-firma':{const {c}=evaluar(s);const hash=await sha(JSON.stringify([s.id,s.propuesta.map(p=>[p.fecha,Math.round(p.valor)]),Date.now()]));
+      s.firma={fecha:CORTE,ip:'192.0.2.10 (prueba)',hash};evento(s,'firmada');s.estado=c.ev.requiereAprobacion?'por_aprobar':'por_cargar';render();break}
+    case'sim-aprob':s.estado='por_cargar';evento(s,'aprobada');render();break;
+    case'copiar-todo':{const {c}=evaluar(s);copiar(lineasCarga(s,c).map(l=>`${l.concepto}\t${dmy(l.fecha)}\t${l.valor}`).join('\n'),'Líneas copiadas.');break}
+    case'cargado':s.estado='cargada';evento(s,'cargada');toast('Marcada como cargada.');render();break;
+    case'verificar':{const {c}=evaluar(s);const L=lineasCarga(s,c);
+      // en pruebas: IngeMAX "devuelve" el plan; una solicitud trae una diferencia a propósito
+      const items=L.map((l,i)=>{const visto=(s.demoDiff&&i===1)?l.valor+1000000:l.valor;return{...l,visto,ok:visto===l.valor}});
+      UI.verif[s.id]={items,dif:items.filter(i=>!i.ok).length,ok:items.every(i=>i.ok)};
+      if(UI.verif[s.id].ok){s.estado='verificada';evento(s,'verificada');toast('Plan verificado.')}
+      render();break}
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('tbody tr[data-id]'))location.hash='#/s/'+e.target.dataset.id});
+document.addEventListener('input',e=>{
+  if(e.target.id==='q'){UI.q=e.target.value;UI.enfocarQ=true;render()}
+  if(e.target.id==='nq'){UI.nueva.q=e.target.value;UI.nueva.sel=null;const pos=e.target.selectionStart;render();const el=$('#nq');el.focus();el.setSelectionRange(pos,pos)}
+});
+document.addEventListener('change',e=>{if(e.target.id==='proy'){UI.nueva.proyecto=Number(e.target.value);UI.nueva.sel=null;render()}});
+
+/* ═══════════ RUTAS ═══════════ */
+function render(){
+  const h=location.hash||'#/';
+  document.querySelector('.nav a').setAttribute('aria-current','page');
+  if(h.startsWith('#/s/'))vistaDetalle(h.slice(4));
+  else if(h==='#/nueva')vistaNueva();
+  else vistaBandeja();
+}
+window.addEventListener('hashchange',()=>{render();window.scrollTo(0,0)});
+// las solicitudes firmadas de demostración necesitan su comprobante
+(async()=>{for(const s of SOLS){if(['por_aprobar','por_cargar','cargada','verificada'].includes(s.estado)&&!s.firma){
+  const f=(s.eventos.find(e=>e.t==='firmada')||{}).f||CORTE;s.firma={fecha:f,ip:'192.0.2.'+(10+SOLS.indexOf(s))+' (prueba)',hash:await sha(s.id+JSON.stringify(s.propuesta.map(p=>[p.fecha,Math.round(p.valor)])))}}}
+  render()})();
+</script>
+</body>
+</html>
