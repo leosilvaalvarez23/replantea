@@ -14,5 +14,12 @@ class Usuario(AbstractUser):
         verbose_name = "Usuario"
         verbose_name_plural = "Usuarios"
 
+    def save(self, *args, **kwargs):
+        # Un superusuario (el que crea `createsuperuser`) es siempre administrador:
+        # si no, nacería con el rol por defecto (asesor) y no vería gerencia.
+        if self.is_superuser:
+            self.rol = "administrador"
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.get_full_name() or self.username} ({self.get_rol_display()})"

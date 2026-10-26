@@ -478,3 +478,21 @@ class PaginasTest(BaseTest):
         self.assertEqual(r["Cache-Control"], "no-store")
         self.assertEqual(r["Referrer-Policy"], "no-referrer")
         r.close()
+
+
+class SuperusuarioTest(BaseTest):
+    def test_un_superusuario_es_administrador_y_ve_gerencia(self):
+        su = Usuario.objects.create_superuser("jefe", password="clave-jefe-1")
+        self.assertEqual(su.rol, "administrador")
+        self.entrar(su)
+        self.assertEqual(self.client.get("/api/proyectos?todos=true").status_code, 200)
+        r = self.client.patch(f"/api/proyectos/{self.proyecto.id}", {"tasa_cia": 0.01}, content_type="application/json")
+        self.assertEqual(r.status_code, 200)
+
+    def test_un_superusuario_existente_se_corrige_al_guardarlo(self):
+        su = Usuario.objects.create_user("viejo", password="x1y2z3w4v5", is_superuser=True, is_staff=True)
+        Usuario.objects.filter(pk=su.pk).update(rol="asesor")        # como quedó el admin creado antes de los roles
+        su.refresh_from_db()
+        self.assertEqual(su.rol, "asesor")
+        su.save()
+        self.assertEqual(su.rol, "administrador")
