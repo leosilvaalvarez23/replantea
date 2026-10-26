@@ -90,7 +90,6 @@ main{max-width:1180px;margin:0 auto;padding:28px 24px 64px;display:grid;gap:20px
 <script src="/app/api.js"></script>
 <script>
 let LISTA = [], YO = null;
-const ROLES = { administrador: 'Administrador', gerente: 'Gerente', asesor: 'Asesor' };
 
 function pintarLista() {
   const filas = LISTA.map(u => `<tr class="${u.activo ? '' : 'inactivo'}" data-id="${u.id}">
