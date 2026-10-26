@@ -163,7 +163,7 @@ const proy=id=>PROYECTOS.find(p=>p.id===id);
 function tasasTxt(p){return p.metodo==='vpn'?`${pctTxt(p.tasa_vpn)} % mensual compuesta`:`Adelantos ${pctTxt(p.tasa_cia)} % · Atrasos ${pctTxt(p.tasa_cliente)} %`}
 function vistaLista(){
   $('#app').innerHTML=`
-  <div class="cab"><div><h1>Proyectos y tasas</h1><p>Aquí defines cómo se calcula el descuento o el cargo de cada proyecto. IngeMAX no entrega estas tasas, por eso se administran en Replantea.</p></div></div>
+  <div class="cab"><div><h1>Proyectos y tasas</h1><p>Aquí defines cómo se calcula el descuento o el cargo de cada proyecto. IngeMAX no entrega estas tasas, por eso se administran en Replantea.</p></div><button class="btn sec" id="btn-sinc" type="button">Sincronizar con IngeMAX</button></div>
   <table class="tabla"><thead><tr><th scope="col">Proyecto</th><th scope="col">Método</th><th scope="col">Tasas</th><th scope="col" class="der">Tope de descuento</th><th scope="col" class="der">Aprueba gerencia desde</th><th scope="col">Estado</th></tr></thead>
   <tbody>${PROYECTOS.map(p=>`<tr data-id="${p.id}" tabindex="0">
     <td><a class="t-link" href="#/p/${p.id}">${esc(p.nombre)}</a><span class="sub">IngeMAX #${p.id_imx}</span></td>
@@ -258,6 +258,7 @@ document.addEventListener('click',e=>{
   const m=e.target.closest('[data-metodo]');if(m){UI.draft.metodo=m.dataset.metodo;vistaEditar(UI.id);return}
   if(e.target.id==='btn-desc'){delete UI.drafts[UI.id];vistaEditar(UI.id);toast('Cambios descartados.')}
   if(e.target.id==='btn-guardar')guardar();
+  if(e.target.id==='btn-sinc')sincronizar();
 });
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('tbody tr[data-id]'))location.hash='#/p/'+e.target.dataset.id});
 window.addEventListener('beforeunload',e=>{if(Object.entries(UI.drafts).some(([id,d])=>sucio(d,proy(Number(id))))){e.preventDefault();e.returnValue=''}});
@@ -276,6 +277,21 @@ async function cargarNegocios(p){
   UI.negsDe[p.id]=lista;UI.negs=lista;
   if(!lista.find(n=>n.id_venta===UI.neg))UI.neg=lista[0].id_venta;
 }
+async function sincronizar(){
+  const btn=document.getElementById('btn-sinc');if(!btn||btn.disabled)return;
+  btn.disabled=true;btn.textContent='Sincronizando…';
+  try{
+    const r=await API.post('/proyectos/sincronizar');
+    if(r.nuevos===0)toast('Ya estás al día. No hay proyectos nuevos en IngeMAX.');
+    else toast(`${r.nuevos} proyecto${r.nuevos===1?'':'s'} nuevo${r.nuevos===1?'':'s'}: ${r.nombres_nuevos.join(', ')}.`);
+    PROYECTOS=await API.get('/proyectos?todos=true');
+    vistaLista();
+  }catch(e){
+    if(e.status===401)return location.replace('/app/login.html?next='+encodeURIComponent(location.pathname+location.hash));
+    toast(e.message);
+  }finally{const b=document.getElementById('btn-sinc');if(b){b.disabled=false;b.textContent='Sincronizar con IngeMAX';}}
+}
+
 async function guardar(){
   if(UI.guardando)return;
   const {v,ok}=leer(UI.draft);if(!ok)return;

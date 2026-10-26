@@ -21,6 +21,15 @@ def _extract_negocios(data) -> list:
     return []
 
 
+def fetch_proyectos() -> list:
+    """Lista de proyectos de IngeMAX."""
+    with httpx.Client(timeout=20) as client:
+        r = client.get(f"{IMX_BASE}obtener-proyectos-ext/", headers=_headers())
+    r.raise_for_status()
+    data = r.json()
+    return data if isinstance(data, list) else []
+
+
 def fetch_negocios(proyecto_id: int) -> list:
     """Negocios de un proyecto de IngeMAX. Síncrono: Ninja lo ejecuta en un hilo."""
     with httpx.Client(timeout=20) as client:

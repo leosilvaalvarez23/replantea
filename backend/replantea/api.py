@@ -135,6 +135,22 @@ class ProyectoUpdateSchema(Schema):
     activo: Optional[bool] = None
 
 
+@api.post("/proyectos/sincronizar", auth=solo_gerente, tags=["proyectos"])
+def sincronizar_proyectos(request):
+    from proyectos.models import ProyectoConfig
+    from imx_client import fetch_proyectos
+    proyectos_imx = _imx(fetch_proyectos)
+    nuevos = []
+    for p in proyectos_imx:
+        _, creado = ProyectoConfig.objects.get_or_create(
+            id_imx=p["id"],
+            defaults={"nombre": p["nombre_proyecto"], "activo": False},
+        )
+        if creado:
+            nuevos.append(p["nombre_proyecto"])
+    return {"sincronizados": len(proyectos_imx), "nuevos": len(nuevos), "nombres_nuevos": nuevos}
+
+
 @api.patch("/proyectos/{proyecto_id}", auth=solo_gerente, tags=["proyectos"])
 def update_proyecto(request, proyecto_id: int, data: ProyectoUpdateSchema):
     from proyectos.models import ProyectoConfig
