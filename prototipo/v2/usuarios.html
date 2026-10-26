@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usuarios · Viviendas y Proyectos</title>
+<link rel="icon" type="image/svg+xml" href="/app/img/icono-vyp.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fondo:#EBF0F2;--papel:#FFFFFF;--tinta:#17262E;--pizarra:#174250;--gris:#898E91;--gris-suave:#C9D1D5;--linea:#D5DDE1;
+  --ahorro:#2F7D32;--ahorro-fondo:#E4F1E3;--sobre:#8E2450;--sobre-fondo:#F6E4EC;--ambar:#8A5A00;--ambar-fondo:#FBF0D5;
+  --radio-g:18px;--radio-m:10px;--radio-p:6px;
+  --f-texto:'Onest',system-ui,sans-serif;--f-marca:'Barlow Condensed','Arial Narrow',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);font:400 15px/1.5 var(--f-texto)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--pizarra);outline-offset:2px;border-radius:var(--radio-p)}
+a{color:var(--pizarra)}
+h1,h2{margin:0}
+h1{font:700 32px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
+h2{font:700 20px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
+.top{background:var(--papel);border-bottom:1px solid var(--linea)}
+.top .in{max-width:1180px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:32px}
+.logo{height:42px;display:block}
+.nav{display:flex;gap:4px}
+.nav a{padding:8px 14px;border-radius:var(--radio-m);text-decoration:none;font-weight:500;color:#41545D}
+.nav a[aria-current=page]{background:var(--fondo);color:var(--pizarra)}
+.top .user{margin-left:auto;font-size:14px;color:#52646C}
+main{max-width:1180px;margin:0 auto;padding:28px 24px 64px;display:grid;gap:20px}
+.cab{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cab p{margin:6px 0 0;color:#41545D}
+.btn{min-height:44px;padding:0 20px;border-radius:var(--radio-m);border:0;background:var(--pizarra);color:#fff;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:#0F3340}
+.btn:disabled{background:var(--gris-suave);color:#5B6B72;cursor:not-allowed}
+.btn.sec{background:var(--papel);color:var(--pizarra);border:2px solid var(--pizarra)}
+.btn.sec:hover:not(:disabled){background:var(--fondo)}
+.btn.peligro{background:var(--sobre-fondo);color:#5A1735;border:2px solid var(--sobre)}
+.btn.peligro:hover:not(:disabled){background:#f0d0dd}
+.txt-btn{background:none;border:0;padding:4px;color:var(--pizarra);font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:14px}
+.card{background:var(--papel);border-radius:var(--radio-g);padding:22px}
+.tabla{width:100%;border-collapse:collapse;background:var(--papel);border-radius:var(--radio-g);overflow:hidden}
+.tabla th{text-align:left;font-size:13px;font-weight:500;color:#52646C;padding:14px 16px;border-bottom:2px solid var(--pizarra)}
+.tabla td{padding:12px 16px;border-bottom:1px solid var(--linea);vertical-align:middle}
+.tabla tbody tr:last-child td{border-bottom:0}
+.sub{display:block;font-size:13px;color:#52646C}
+.punto{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.punto.on{background:var(--ahorro)}.punto.off{background:var(--gris)}
+.rol{display:inline-block;padding:2px 10px;border-radius:999px;font-size:13px;font-weight:500}
+.rol.administrador{background:#EEF2FF;color:#3730A3}
+.rol.gerente{background:var(--ambar-fondo);color:var(--ambar)}
+.rol.asesor{background:var(--fondo);color:#41545D}
+.inactivo td{opacity:.55}
+/* overlay modal */
+.overlay{position:fixed;inset:0;background:rgba(23,38,46,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.overlay[hidden]{display:none}
+.modal{background:var(--papel);border-radius:var(--radio-g);padding:28px 24px;width:100%;max-width:460px;display:grid;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.modal-x{background:none;border:0;font-size:22px;line-height:1;color:var(--gris);cursor:pointer;padding:2px 6px;border-radius:var(--radio-p)}
+.modal-x:hover{color:var(--tinta)}
+.campo{display:grid;gap:4px}
+.campo label{font-size:13.5px;color:#41545D;font-weight:500}
+.campo input,.campo select{min-height:44px;padding:8px 12px;border:1.5px solid var(--linea);border-radius:var(--radio-m);background:var(--papel)}
+.campo input:focus,.campo select:focus{border-color:var(--pizarra);outline:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.aviso{border-radius:var(--radio-m);padding:10px 14px;font-size:14px}
+.aviso p{margin:0}
+.aviso.err{background:var(--sobre-fondo);border:1.5px solid var(--sobre);color:#5A1735}
+.aviso.ok{background:var(--ahorro-fondo);color:#1D5A20}
+.btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 18px;border-radius:var(--radio-m);font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:200}
+.toast.on{opacity:1}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:14px;letter-spacing:.04em}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}.top .in{gap:16px;padding:10px 16px}main{padding:20px 16px 48px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="in" id="cab"></div></header>
+<main id="app"><p style="color:#52646C">Cargando…</p></main>
+<div class="toast" id="toast" role="status"></div>
+<div class="overlay" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+  <div class="modal" id="modal-inner"></div>
+</div>
+
+<script src="/app/motor.js"></script>
+<script src="/app/api.js"></script>
+<script>
+let LISTA = [], YO = null;
+const ROLES = { administrador: 'Administrador', gerente: 'Gerente', asesor: 'Asesor' };
+
+function pintarLista() {
+  const filas = LISTA.map(u => `<tr class="${u.activo ? '' : 'inactivo'}" data-id="${u.id}">
+    <td><b>${esc(u.nombre_completo)}</b><span class="sub">@${esc(u.username)}</span></td>
+    <td><span class="rol ${u.rol}">${ROLES[u.rol] || u.rol}</span></td>
+    <td><span class="punto ${u.activo ? 'on' : 'off'}"></span> ${u.activo ? 'Activo' : 'Inactivo'}</td>
+    <td style="text-align:right">
+      <button class="txt-btn" data-act="editar" data-id="${u.id}" type="button">Editar</button>
+      <button class="txt-btn" data-act="reset" data-id="${u.id}" type="button" style="margin-left:8px">Nueva contraseña</button>
+    </td></tr>`).join('');
+  document.getElementById('app').innerHTML = `
+    <div class="cab"><div><h1>Usuarios</h1><p>${LISTA.length} usuario${LISTA.length === 1 ? '' : 's'}</p></div>
+      <button class="btn" data-act="nuevo" type="button">Nuevo usuario</button></div>
+    <table class="tabla"><thead><tr>
+      <th scope="col">Nombre</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col"><span class="sr">Acciones</span></th>
+    </tr></thead><tbody>${filas}</tbody></table>`;
+}
+
+/* ═══════════ MODALES ═══════════ */
+function cerrarModal() { document.getElementById('modal').hidden = true; }
+
+function abrirNuevo() {
+  document.getElementById('modal-inner').innerHTML = `
+    <div class="modal-cab"><h2 id="modal-titulo">Nuevo usuario</h2><button class="modal-x" data-act="cerrar" type="button" aria-label="Cerrar">×</button></div>
+    <div class="grid2">
+      <div class="campo"><label for="m-nombre">Nombre</label><input id="m-nombre" type="text" autocomplete="off"></div>
+      <div class="campo"><label for="m-apellido">Apellido</label><input id="m-apellido" type="text" autocomplete="off"></div>
+    </div>
+    <div class="campo"><label for="m-username">Usuario (para iniciar sesión)</label><input id="m-username" type="text" autocomplete="off" spellcheck="false" autocapitalize="none"></div>
+    <div class="campo"><label for="m-rol">Rol</label><select id="m-rol">
+      <option value="asesor">Asesor</option>
+      <option value="gerente">Gerente</option>
+      <option value="administrador">Administrador</option>
+    </select></div>
+    <div class="campo"><label for="m-pass">Contraseña temporal</label><input id="m-pass" type="text" autocomplete="off" spellcheck="false"></div>
+    <div id="m-error"></div>
+    <div class="btns">
+      <button class="btn" data-act="crear" type="button">Crear usuario</button>
+      <button class="btn sec" data-act="cerrar" type="button">Cancelar</button>
+    </div>`;
+  document.getElementById('modal').hidden = false;
+  document.getElementById('m-nombre').focus();
+}
+
+function abrirEditar(id) {
+  const u = LISTA.find(x => x.id === id); if (!u) return;
+  document.getElementById('modal-inner').innerHTML = `
+    <div class="modal-cab"><h2 id="modal-titulo">Editar usuario</h2><button class="modal-x" data-act="cerrar" type="button" aria-label="Cerrar">×</button></div>
+    <p style="margin:0;color:#41545D;font-size:14px">@${esc(u.username)}</p>
+    <div class="grid2">
+      <div class="campo"><label for="m-nombre">Nombre</label><input id="m-nombre" type="text" value="${esc(u.nombre)}" autocomplete="off"></div>
+      <div class="campo"><label for="m-apellido">Apellido</label><input id="m-apellido" type="text" value="${esc(u.apellido)}" autocomplete="off"></div>
+    </div>
+    <div class="campo"><label for="m-rol">Rol</label><select id="m-rol">
+      <option value="asesor" ${u.rol === 'asesor' ? 'selected' : ''}>Asesor</option>
+      <option value="gerente" ${u.rol === 'gerente' ? 'selected' : ''}>Gerente</option>
+      <option value="administrador" ${u.rol === 'administrador' ? 'selected' : ''}>Administrador</option>
+    </select></div>
+    <div class="campo"><label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+      <input type="checkbox" id="m-activo" ${u.activo ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--pizarra)">
+      Usuario activo (puede iniciar sesión)
+    </label></div>
+    <div id="m-error"></div>
+    <div class="btns">
+      <button class="btn" data-act="guardar-editar" data-id="${u.id}" type="button">Guardar cambios</button>
+      <button class="btn sec" data-act="cerrar" type="button">Cancelar</button>
+    </div>`;
+  document.getElementById('modal').hidden = false;
+  document.getElementById('m-nombre').focus();
+}
+
+function mostrarReset(password) {
+  document.getElementById('modal-inner').innerHTML = `
+    <div class="modal-cab"><h2 id="modal-titulo">Contraseña generada</h2><button class="modal-x" data-act="cerrar" type="button" aria-label="Cerrar">×</button></div>
+    <div class="aviso ok"><p>Copia esta contraseña y dásela al usuario. No se mostrará de nuevo.</p></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <code class="mono" style="flex:1;padding:10px 12px;background:var(--fondo);border-radius:var(--radio-m)">${esc(password)}</code>
+      <button class="btn sec" data-act="copiar-pass" data-pass="${esc(password)}" type="button">Copiar</button>
+    </div>
+    <div class="btns"><button class="btn" data-act="cerrar" type="button">Listo</button></div>`;
+  document.getElementById('modal').hidden = false;
+}
+
+function setError(msg) {
+  const el = document.getElementById('m-error'); if (!el) return;
+  el.innerHTML = msg ? `<div class="aviso err"><p>${esc(msg)}</p></div>` : '';
+}
+
+/* ═══════════ ACCIONES ═══════════ */
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act;
+
+  if (act === 'cerrar') { cerrarModal(); return; }
+  if (act === 'nuevo') { abrirNuevo(); return; }
+  if (act === 'editar') { abrirEditar(Number(t.dataset.id)); return; }
+  if (act === 'copiar-pass') { try { await navigator.clipboard.writeText(t.dataset.pass); toast('Contraseña copiada.'); } catch { toast('Selecciónala y cópiala a mano.'); } return; }
+
+  if (act === 'reset') {
+    const u = LISTA.find(x => x.id === Number(t.dataset.id));
+    if (!confirm(`¿Generar una nueva contraseña para ${u ? u.nombre_completo : 'este usuario'}?`)) return;
+    try {
+      const r = await API.post(`/usuarios/${t.dataset.id}/reset_password`);
+      mostrarReset(r.password_temporal);
+    } catch (e) { toast(e.message); }
+    return;
+  }
+
+  if (act === 'crear') {
+    const nombre = document.getElementById('m-nombre')?.value.trim();
+    const apellido = document.getElementById('m-apellido')?.value.trim();
+    const username = document.getElementById('m-username')?.value.trim();
+    const rol = document.getElementById('m-rol')?.value;
+    const password = document.getElementById('m-pass')?.value;
+    if (!nombre || !username || !password) { setError('Nombre, usuario y contraseña son obligatorios.'); return; }
+    try {
+      const u = await API.post('/usuarios', { nombre, apellido, username, rol, password });
+      LISTA.push(u); LISTA.sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
+      cerrarModal(); pintarLista(); toast(`Usuario @${u.username} creado.`);
+    } catch (e) { setError(e.message); }
+    return;
+  }
+
+  if (act === 'guardar-editar') {
+    const id = Number(t.dataset.id);
+    const nombre = document.getElementById('m-nombre')?.value.trim();
+    const apellido = document.getElementById('m-apellido')?.value.trim();
+    const rol = document.getElementById('m-rol')?.value;
+    const activo = document.getElementById('m-activo')?.checked;
+    try {
+      const u = await API.patch(`/usuarios/${id}`, { nombre, apellido, rol, activo });
+      const idx = LISTA.findIndex(x => x.id === id);
+      if (idx >= 0) LISTA[idx] = u;
+      cerrarModal(); pintarLista(); toast('Cambios guardados.');
+    } catch (e) { setError(e.message); }
+    return;
+  }
+});
+
+document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget) cerrarModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+
+/* ═══════════ INICIO ═══════════ */
+(async () => {
+  YO = await exigirSesion(['administrador']);
+  if (!YO) return;
+  pintarCabecera(YO, '/app/usuarios.html');
+  try {
+    LISTA = await API.get('/usuarios');
+    pintarLista();
+  } catch (e) {
+    if (e.status === 401) location.replace('/app/login.html');
+    else document.getElementById('app').innerHTML = `<div class="card"><p>${esc(e.message)}</p></div>`;
+  }
+})();
+</script>
+</body>
+</html>

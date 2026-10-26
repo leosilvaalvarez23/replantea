@@ -6,7 +6,9 @@ from django.middleware.csrf import get_token
 from ninja import NinjaAPI, Schema
 from ninja.errors import HttpError
 
-from replantea.auth import asesor_o_gerente, cualquier_usuario, solo_gerente
+from replantea.auth import AuthRol, asesor_o_gerente, cualquier_usuario, solo_gerente
+
+solo_admin = AuthRol("administrador")
 from solicitudes.api import comprador as comprador_router
 from solicitudes.api import router as solicitudes_router
 from solicitudes.servicios import ErrorNegocio
@@ -184,6 +186,102 @@ def update_proyecto(request, proyecto_id: int, data: ProyectoUpdateSchema):
         setattr(p, k, v)
     p.save()
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Usuarios
+# ---------------------------------------------------------------------------
+
+
+
+def _u(u) -> dict:
+    return {
+        "id": u.id, "username": u.username,
+        "nombre": u.first_name, "apellido": u.last_name,
+        "nombre_completo": u.get_full_name() or u.username,
+        "rol": u.rol, "activo": u.is_active,
+    }
+
+
+class UsuarioCreateIn(Schema):
+    username: str
+    nombre: str
+    apellido: str
+    rol: str
+    password: str
+
+
+class UsuarioUpdateIn(Schema):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    rol: Optional[str] = None
+    activo: Optional[bool] = None
+
+
+ROLES_VALIDOS = {"administrador", "gerente", "asesor"}
+
+
+@api.get("/usuarios", auth=solo_admin, tags=["usuarios"])
+def listar_usuarios(request):
+    from usuarios.models import Usuario
+    return [_u(u) for u in Usuario.objects.order_by("first_name", "last_name", "username")]
+
+
+@api.post("/usuarios", auth=solo_admin, tags=["usuarios"])
+def crear_usuario(request, datos: UsuarioCreateIn):
+    from usuarios.models import Usuario
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjValError
+    if datos.rol not in ROLES_VALIDOS:
+        raise HttpError(422, f"Rol inválido. Usa: {', '.join(ROLES_VALIDOS)}.")
+    if Usuario.objects.filter(username=datos.username.strip()).exists():
+        raise HttpError(409, "Ya existe un usuario con ese nombre de usuario.")
+    try:
+        validate_password(datos.password)
+    except DjValError as e:
+        raise HttpError(422, " ".join(e.messages))
+    u = Usuario(username=datos.username.strip(), first_name=datos.nombre.strip(),
+                last_name=datos.apellido.strip(), rol=datos.rol)
+    u.set_password(datos.password)
+    u.save()
+    return _u(u)
+
+
+@api.patch("/usuarios/{usuario_id}", auth=solo_admin, tags=["usuarios"])
+def actualizar_usuario(request, usuario_id: int, datos: UsuarioUpdateIn):
+    from usuarios.models import Usuario
+    try:
+        u = Usuario.objects.get(pk=usuario_id)
+    except Usuario.DoesNotExist:
+        raise HttpError(404, "Usuario no encontrado.")
+    if u.pk == request.auth.pk and datos.activo is False:
+        raise HttpError(409, "No puedes desactivarte a ti mismo.")
+    if datos.rol is not None and datos.rol not in ROLES_VALIDOS:
+        raise HttpError(422, f"Rol inválido. Usa: {', '.join(ROLES_VALIDOS)}.")
+    if datos.nombre is not None:
+        u.first_name = datos.nombre.strip()
+    if datos.apellido is not None:
+        u.last_name = datos.apellido.strip()
+    if datos.rol is not None:
+        u.rol = datos.rol
+    if datos.activo is not None:
+        u.is_active = datos.activo
+    u.save()
+    return _u(u)
+
+
+@api.post("/usuarios/{usuario_id}/reset_password", auth=solo_admin, tags=["usuarios"])
+def reset_password(request, usuario_id: int):
+    from usuarios.models import Usuario
+    import secrets as _s
+    try:
+        u = Usuario.objects.get(pk=usuario_id)
+    except Usuario.DoesNotExist:
+        raise HttpError(404, "Usuario no encontrado.")
+    nueva = _s.token_urlsafe(10)
+    u.set_password(nueva)
+    u.save()
+    return {"password_temporal": nueva}
 
 
 # ---------------------------------------------------------------------------

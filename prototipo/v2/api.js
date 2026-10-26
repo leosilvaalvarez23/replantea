@@ -40,6 +40,7 @@ const NAV = [
   { href: '/app/asesor.html', t: 'Solicitudes', roles: ['asesor', 'gerente', 'administrador'] },
   { href: '/app/aprobaciones.html', t: 'Aprobaciones', roles: ['gerente', 'administrador'] },
   { href: '/app/proyectos.html', t: 'Proyectos', roles: ['gerente', 'administrador'] },
+  { href: '/app/usuarios.html', t: 'Usuarios', roles: ['administrador'] },
 ];
 const inicioDe = u => (u.rol === 'gerente' ? '/app/aprobaciones.html' : '/app/asesor.html');
 
