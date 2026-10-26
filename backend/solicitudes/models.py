@@ -17,11 +17,12 @@ def _vence_en():
 class Solicitud(models.Model):
     ESTADO_CHOICES = [
         ("borrador", "Borrador"),
-        ("pendiente_firma", "Pendiente firma"),
+        ("pendiente_aprobacion", "Pendiente aprobación gerencia"),
+        ("aprobada", "Aprobada por gerencia"),
+        ("rechazada", "Devuelta por gerencia"),
+        ("pendiente_firma", "Pendiente firma comprador"),
         ("firmada", "Firmada"),
-        ("pendiente_aprobacion", "Pendiente aprobación"),
-        ("aprobada", "Aprobada"),
-        ("rechazada", "Rechazada"),
+        ("rechazada_comprador", "Rechazada por comprador"),
         ("cargada", "Cargada en IngeMAX"),
         ("verificada", "Verificada contra IngeMAX"),
     ]
@@ -66,6 +67,9 @@ class Solicitud(models.Model):
     otp_vence = models.DateTimeField(null=True, blank=True)
     otp_intentos = models.PositiveSmallIntegerField(default=0)
 
+    # Rechazo del comprador
+    rechazo_observacion = models.TextField(blank=True)
+
     # Firma electrónica
     firma_nombre = models.CharField(max_length=200, blank=True)
     firma_documento = models.CharField(max_length=50, blank=True)
@@ -94,7 +98,8 @@ class Solicitud(models.Model):
 
     @property
     def activa(self) -> bool:
-        cerrada = {"firmada", "pendiente_aprobacion", "aprobada", "rechazada", "cargada", "verificada"}
+        cerrada = {"firmada", "pendiente_aprobacion", "aprobada", "rechazada",
+                   "rechazada_comprador", "cargada", "verificada"}
         return self.estado not in cerrada and timezone.now() < self.vence_en
 
     class Meta:

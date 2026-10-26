@@ -69,6 +69,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 24px 64px;display:grid;gap:20px
 .punto{width:10px;height:10px;border-radius:50%;flex:none;background:var(--gris)}
 .punto.enviada{background:var(--propuesta)}.punto.devuelta{background:var(--sobre)}.punto.borrador{background:var(--gris)}.punto.por_aprobar{background:#C58A12}.punto.por_cargar{background:var(--pizarra);box-shadow:0 0 0 3px #17425033}
 .punto.cargada{background:#C58A12}.punto.verificada{background:var(--ahorro)}.punto.vencida{background:var(--sobre)}
+.punto.por_enviar{background:var(--ahorro);box-shadow:0 0 0 3px #2F7D3233}.punto.rechazada_comprador{background:var(--sobre)}
 .vacio{padding:40px 16px;text-align:center;color:#52646C}
 
 /* detalle */
@@ -126,6 +127,10 @@ main{max-width:1180px;margin:0 auto;padding:28px 24px 64px;display:grid;gap:20px
 .datos div:first-child{border-top:0}
 .datos dt{color:#52646C;font-size:14px}.datos dd{margin:0;font-weight:500;text-align:right;overflow-wrap:anywhere}
 .mono{font-family:ui-monospace,Consolas,monospace;font-size:13px}
+/* plan editable */
+.plan-inp{width:100%;min-height:34px;padding:3px 8px;border:1.5px solid var(--linea);border-radius:var(--radio-p);background:var(--papel);font-size:14px;font-variant-numeric:tabular-nums}
+.plan-inp.der{text-align:right}
+.plan-inp:focus{border-color:var(--pizarra);outline:none}
 /* nueva solicitud */
 .form{display:grid;gap:16px;max-width:640px}
 .campo{display:grid;gap:4px}
@@ -150,15 +155,34 @@ main{max-width:1180px;margin:0 auto;padding:28px 24px 64px;display:grid;gap:20px
 <script src="/app/api.js"></script>
 <script>
 /* ═══════════ ESTADO ═══════════ */
-const UI = { filtro: 'todas', q: '', lista: [], proyectos: [], nueva: { proyecto: null, q: '', sel: null, correo: '', res: [], estado: 'ocioso', error: '' }, verif: {}, ocupado: false };
+const UI = {
+  filtro: 'todas', q: '', lista: [], proyectos: [],
+  nueva: { proyecto: null, q: '', sel: null, correo: '', res: [], estado: 'ocioso', error: '' },
+  verif: {},
+  PL: { items: [], resultado: null, evalReq: 0 },
+  ocupado: false,
+};
 let USUARIO = null;
 
 const ESTADOS = {
-  borrador: 'Borrador', enviada: 'Enviada al comprador', por_aprobar: 'Por aprobar', por_cargar: 'Por cargar en IngeMAX',
-  cargada: 'Cargada, por verificar', verificada: 'Verificada', devuelta: 'Devuelta por gerencia', vencida: 'Link vencido' };
-const FILTROS = [['todas', 'Todas'], ['borrador', 'Borrador'], ['enviada', 'Enviadas'], ['por_aprobar', 'Por aprobar'], ['por_cargar', 'Por cargar'],
-  ['cargada', 'Por verificar'], ['verificada', 'Verificadas'], ['devuelta', 'Devueltas'], ['vencida', 'Vencidas']];
-const SIEMPRE = new Set(['todas', 'borrador', 'enviada', 'por_aprobar', 'por_cargar', 'cargada', 'verificada']);   // Devueltas y Vencidas solo si hay
+  borrador: 'Borrador',
+  por_aprobar: 'Por aprobar',
+  por_enviar: 'Por enviar al comprador',
+  enviada: 'Enviada al comprador',
+  por_cargar: 'Por cargar en IngeMAX',
+  cargada: 'Cargada, por verificar',
+  verificada: 'Verificada',
+  devuelta: 'Devuelta por gerencia',
+  rechazada_comprador: 'Rechazada por comprador',
+  vencida: 'Link vencido',
+};
+const FILTROS = [
+  ['todas', 'Todas'], ['borrador', 'Borrador'], ['por_aprobar', 'Por aprobar'],
+  ['por_enviar', 'Por enviar'], ['enviada', 'Enviadas'], ['por_cargar', 'Por cargar'],
+  ['cargada', 'Por verificar'], ['verificada', 'Verificadas'],
+  ['devuelta', 'Devueltas'], ['rechazada_comprador', 'Rechazadas'], ['vencida', 'Vencidas'],
+];
+const SIEMPRE = new Set(['todas', 'borrador', 'por_aprobar', 'por_enviar', 'enviada', 'por_cargar', 'cargada', 'verificada']);
 
 const dia = iso => (iso || '').slice(0, 10);
 const diasPara = iso => Math.round((Date.parse(dia(iso) + 'T12:00:00Z') - Date.parse(CORTE + 'T12:00:00Z')) / 86400000);
@@ -167,10 +191,12 @@ function detalleEstado(s) {
   if (s.estado_ui === 'enviada' && s.vence_en) { const d = diasPara(s.vence_en); return d <= 0 ? 'Vence hoy' : `Vence en ${d} día${d === 1 ? '' : 's'}`; }
   if (s.estado_ui === 'borrador') return 'Sin enviar';
   if (s.estado_ui === 'por_aprobar') return 'Gerencia';
+  if (s.estado_ui === 'por_enviar') return 'Aprobada';
   if (s.estado_ui === 'devuelta') return 'Revisa el comentario';
+  if (s.estado_ui === 'rechazada_comprador') return 'Comprador rechazó';
   return '';
 }
-const adaptar = an => ({ recaudo: an.recaudo, pend: an.pendiente, credito: an.credito, fechaCredito: an.fecha_credito });   // lo que espera lineaSVG
+const adaptar = an => ({ recaudo: an.recaudo, pend: an.pendiente, credito: an.credito, fechaCredito: an.fecha_credito });
 const correoValido = c => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c);
 
 function mostrarError(e) {
@@ -182,9 +208,14 @@ function mostrarError(e) {
 async function vistaBandeja() {
   UI.lista = await API.get('/solicitudes');
   const cuenta = f => f === 'todas' ? UI.lista.length : UI.lista.filter(s => s.estado_ui === f).length;
-  const porCargar = cuenta('por_cargar'), porVer = cuenta('cargada'), dev = cuenta('devuelta');
-  const partes = [porCargar && `${porCargar} por cargar en IngeMAX`, porVer && `${porVer} por verificar`, dev && `${dev} devuelta${dev === 1 ? '' : 's'} por gerencia`].filter(Boolean);
-  const frase = partes.length ? 'Tienes ' + partes.join(', ').replace(/, ([^,]*)$/, ' y $1') + '.' : 'No tienes cargas ni verificaciones pendientes.';
+  const porCargar = cuenta('por_cargar'), porVer = cuenta('cargada'), dev = cuenta('devuelta'), porEnv = cuenta('por_enviar');
+  const partes = [
+    porEnv && `${porEnv} por enviar al comprador`,
+    porCargar && `${porCargar} por cargar en IngeMAX`,
+    porVer && `${porVer} por verificar`,
+    dev && `${dev} devuelta${dev === 1 ? '' : 's'} por gerencia`,
+  ].filter(Boolean);
+  const frase = partes.length ? 'Tienes ' + partes.join(', ').replace(/, ([^,]*)$/, ' y $1') + '.' : 'No tienes tareas pendientes.';
   const q = UI.q.trim().toLowerCase();
   const lista = UI.lista.filter(s => (UI.filtro === 'todas' || s.estado_ui === UI.filtro) &&
     (!q || [s.inmueble, s.comprador.nombre, s.comprador.documento, s.proyecto.nombre, String(s.id_venta)].join(' ').toLowerCase().includes(q)));
@@ -192,7 +223,7 @@ async function vistaBandeja() {
     <td><a class="t-link" href="#/s/${s.id}">${esc(s.inmueble || 'Venta ' + s.id_venta)}</a><span class="sub">${esc(s.proyecto.nombre)}</span></td>
     <td>${esc(s.comprador.nombre)}<span class="sub">${esc(s.comprador.documento)}</span></td>
     <td class="der">${resTxt(s.ajuste)}</td>
-    <td><span class="estado"><span class="punto ${s.estado_ui}"></span><span>${ESTADOS[s.estado_ui]}<span class="sub">${esc(detalleEstado(s))}</span></span></span></td>
+    <td><span class="estado"><span class="punto ${s.estado_ui}"></span><span>${ESTADOS[s.estado_ui] || s.estado_ui}<span class="sub">${esc(detalleEstado(s))}</span></span></span></td>
     <td class="der"><span class="sub">Venta ${s.id_venta}</span></td></tr>`).join('');
   $('#app').innerHTML = `
   <div class="cab"><div><h1>Solicitudes</h1><p>${frase}</p></div><button class="btn" data-act="nueva" type="button">Nueva solicitud</button></div>
@@ -238,7 +269,7 @@ async function buscarNegocios() {
   const pedido = JSON.stringify([N.proyecto, N.q]);
   try {
     const r = await API.get(`/solicitudes/negocios/buscar?proyecto_id=${N.proyecto}&q=${encodeURIComponent(N.q.trim())}`);
-    if (pedido !== JSON.stringify([N.proyecto, N.q])) return;      // llegó tarde: ya cambió la búsqueda
+    if (pedido !== JSON.stringify([N.proyecto, N.q])) return;
     N.res = r; N.estado = 'listo';
     if (N.sel && !r.find(n => n.id_venta === N.sel)) N.sel = null;
   } catch (e) {
@@ -249,64 +280,206 @@ async function buscarNegocios() {
   const nq = $('#nq'); if (nq && UI.enfocarNQ) { nq.focus(); nq.setSelectionRange(nq.value.length, nq.value.length); }
 }
 
+/* ═══════════ PLAN EDITABLE (borrador) ═══════════ */
+function _evalResHTML(res) {
+  if (!res) return '';
+  if (res.errors && res.errors.length) return `<div class="aviso err"><p>${res.errors.map(esc).join('<br>')}</p></div>`;
+  const aj = res.ajuste, tipo = aj <= -1 ? 'ahorro' : aj >= 1 ? 'sobre' : '';
+  let html = tipo === 'ahorro'
+    ? `<div class="aviso ok"><p>El comprador ahorra <b>${fmt(-aj)}</b>.${res.requiere_aprobacion ? ' Supera el umbral → gerencia debe aprobarlo.' : ''}</p></div>`
+    : tipo === 'sobre' ? `<div class="aviso mora"><p>El comprador paga <b>${fmt(aj)} de más</b>.</p></div>`
+    : `<div class="aviso ok"><p>Sin cambio en el valor total.</p></div>`;
+  if (res.excedente > 0) html += `<div class="aviso cred" style="margin-top:8px"><p>Excedente sobre capital: el crédito bajaría a <b>${fmt(res.nuevo_credito)}</b>. Informar al banco.</p></div>`;
+  return html;
+}
+
+let _evalTimer;
+async function evalPlan() {
+  const id = idActual(); if (!id || !UI.PL.items.length) return;
+  const req = ++UI.PL.evalReq;
+  clearTimeout(_evalTimer);
+  _evalTimer = setTimeout(async () => {
+    try {
+      const res = await API.post(`/solicitudes/${id}/evaluar`, { propuesta: UI.PL.items });
+      if (req !== UI.PL.evalReq) return;
+      UI.PL.resultado = res;
+      const el = document.getElementById('eval-res');
+      if (el) { const h = _evalResHTML(res); el.innerHTML = h; el.style.marginTop = h ? '12px' : '0'; }
+    } catch (_) { /* fallo silencioso en eval en tiempo real */ }
+  }, 500);
+}
+
+async function guardarPlan() {
+  const id = idActual(); if (!id || UI.ocupado) return;
+  UI.ocupado = true;
+  try {
+    const d = await API.patch(`/solicitudes/${id}/plan`, { propuesta: UI.PL.items });
+    toast('Plan guardado.');
+    UI.PL.items = JSON.parse(JSON.stringify(d.propuesta));
+    UI.PL.resultado = null;
+    pintarDetalle(d);
+  } catch (e) { if (e.status === 401) return mostrarError(e); toast(e.message); }
+  finally { UI.ocupado = false; }
+}
+
+async function guardarYEnviar() {
+  const id = idActual(); if (!id || UI.ocupado) return;
+  UI.ocupado = true;
+  try {
+    await API.patch(`/solicitudes/${id}/plan`, { propuesta: UI.PL.items });
+    const d = await API.post(`/solicitudes/${id}/enviar`);
+    toast('Enviada.');
+    pintarDetalle(d);
+  } catch (e) { if (e.status === 401) return mostrarError(e); toast(e.message); }
+  finally { UI.ocupado = false; }
+}
+
 /* ═══════════ DETALLE ═══════════ */
-const PASOS = [['creada', 'Solicitud creada'], ['enviada', 'Link enviado al comprador'], ['firmada', 'Firmada por el comprador'], ['aprobada', 'Aprobada por gerencia'], ['cargada', 'Cargada en IngeMAX'], ['verificada', 'Verificada contra IngeMAX']];
+const PASOS = [
+  ['creada', 'Solicitud creada'],
+  ['enviada', 'Link enviado al comprador'],
+  ['aprobada', 'Aprobada por gerencia'],
+  ['firmada', 'Firmada por el comprador'],
+  ['cargada', 'Cargada en IngeMAX'],
+  ['verificada', 'Verificada contra IngeMAX'],
+];
+
 async function vistaDetalle(id) {
   const d = await API.get('/solicitudes/' + id);
+  if (d.estado_ui === 'borrador') UI.PL.items = JSON.parse(JSON.stringify(d.propuesta));
   pintarDetalle(d);
 }
+
 function pintarDetalle(d) {
   const a = adaptar(d.analisis), r = d.resultado, aj = d.ajuste, tipo = aj <= -1 ? 'ahorro' : aj >= 1 ? 'sobre' : '';
-  const izq = [...d.analisis.pendiente].sort((x, y) => x.fecha.localeCompare(y.fecha)), der = [...d.propuesta].sort((x, y) => x.fecha.localeCompare(y.fecha)), v = izq.filter(p => p.vencida).length;
-  let filas = '';
-  for (let i = 0; i < Math.max(izq.length, v + der.length); i++) {
-    const l = izq[i], p = i >= v ? der[i - v] : null;
-    filas += `<tr><td class="${l && l.vencida ? 'venc' : ''}">${l ? dmy(l.fecha) : ''}</td><td class="der ${l && l.vencida ? 'venc' : ''}">${l ? num(l.valor) : ''}</td><td class="lado">${p ? dmy(p.fecha) : ''}</td><td class="der">${p ? num(p.valor) : ''}</td></tr>`;
-  }
-  if (d.analisis.credito > 0) filas += `<tr><td>Crédito</td><td class="der">${num(d.analisis.credito)}</td><td class="lado">Crédito</td><td class="der">${num(d.nuevo_credito)}</td></tr>`;
 
   const hechos = new Set(d.eventos.map(e => e.t));
   const pasos = PASOS.filter(([k]) => k !== 'aprobada' || hechos.has('aprobada') || d.requiere_aprobacion);
   const sig = pasos.find(([k]) => !hechos.has(k));
-  const tiempo = pasos.map(([k, t]) => { const e = d.eventos.find(x => x.t === k); const cls = hechos.has(k) ? 'hecho' : (sig && sig[0] === k ? 'actual' : '');
-    return `<li class="${cls}">${t}${e ? `<small>${fLarga(e.fecha)}</small>` : ''}</li>`; }).join('') +
-    (hechos.has('devuelta') ? `<li class="actual">Devuelta por gerencia<small>${fLarga(d.eventos.find(x => x.t === 'devuelta').fecha)}</small></li>` : '');
+  const tiempoHTML = pasos.map(([k, t]) => {
+    const e = d.eventos.find(x => x.t === k);
+    const cls = hechos.has(k) ? 'hecho' : (sig && sig[0] === k ? 'actual' : '');
+    return `<li class="${cls}">${t}${e ? `<small>${fLarga(e.fecha)}</small>` : ''}</li>`;
+  }).join('') +
+  (hechos.has('devuelta') ? `<li class="actual">Devuelta por gerencia<small>${fLarga(d.eventos.find(x => x.t === 'devuelta').fecha)}</small></li>` : '');
 
   const url = d.link ? location.origin + d.link : '';
-  let accion = '';
-  switch (d.estado_ui) {
-    case 'borrador': accion = `<h2>Falta enviar al comprador</h2><p>Genera el link para que el comprador revise y firme. Vence a los 7 días.</p><div class="btns"><button class="btn" data-act="enviar" type="button">Generar link</button></div>`; break;
-    case 'enviada': accion = `<h2>Esperando la firma del comprador</h2><p>Comparte este link. Vence el ${fLarga(dia(d.vence_en))}.</p><div class="link-box"><input readonly value="${esc(url)}" aria-label="Link del comprador"><button class="btn sec" data-act="copiar-link" type="button">Copiar</button></div>`; break;
-    case 'por_aprobar': accion = `<h2>Esperando a gerencia</h2><p>El descuento supera el umbral del proyecto (${fmt(d.umbral)}), así que gerencia debe aprobarlo antes de que cargues el plan.</p>`; break;
-    case 'por_cargar': accion = `<h2>Carga el plan en IngeMAX</h2><p>Usa estos conceptos tal cual: deben coincidir exactamente.</p>
-      <table class="carga"><thead><tr><th>Concepto</th><th>Fecha</th><th class="der">Valor</th><th><span class="sr">Copiar</span></th></tr></thead><tbody>${d.lineas_carga.map((l, i) => `<tr class="${l.ajuste ? 'ajuste' : ''}"><td>${esc(l.concepto)}</td><td>${dmy(l.fecha)}</td><td class="der">${l.valor < 0 ? '−' : ''}${num(l.valor)}</td><td class="der"><button class="txt-btn cp" data-copia="${i}" type="button" aria-label="Copiar línea ${i + 1}">Copiar</button></td></tr>`).join('')}</tbody></table>
-      ${r.excedente > 0 ? `<div class="aviso cred" style="margin-top:12px"><p><b>Actualiza también el crédito:</b> de ${fmt(d.valor_credito)} a ${fmt(d.nuevo_credito)}.</p></div>` : ''}
-      <div class="btns"><button class="btn sec" data-act="copiar-todo" type="button">Copiar todas las líneas</button><button class="btn" data-act="cargado" type="button">Ya la cargué en IngeMAX</button></div>`; break;
-    case 'cargada': { const V = UI.verif[d.id];
-      accion = `<h2>Verifica contra IngeMAX</h2><p>Comparamos el plan que cargaste con lo que firmó el comprador.</p><div class="btns"><button class="btn" data-act="verificar" type="button">${V ? 'Volver a verificar' : 'Verificar ahora'}</button></div>
-      ${V ? (V.ok ? '<div class="aviso ok" style="margin-top:12px"><p><b>Todo coincide.</b></p></div>' : `<div class="aviso err" style="margin-top:12px" role="alert"><p><b>Hay ${V.diferencias} diferencia${V.diferencias === 1 ? '' : 's'}.</b> Corrígelas en IngeMAX y vuelve a verificar.</p></div>`) +
-        `<ul class="verif">${V.items.map(i => `<li><span class="${i.ok ? 'si' : 'no'}">${i.ok ? '✓' : '✕'}</span><span>${i.fecha ? dmy(i.fecha) + ' · ' : ''}${esc(i.concepto)} · esperado ${fmt(i.valor)}${i.ok ? '' : (i.visto == null ? ', no aparece en IngeMAX' : `, en IngeMAX ${fmt(i.visto)}`)}</span></li>`).join('')}</ul>` : ''}`; break; }
-    case 'verificada': accion = `<h2>Solicitud cerrada</h2><div class="aviso ok"><p>El plan cargado en IngeMAX coincide con lo que firmó el comprador.</p></div>`; break;
-    case 'vencida': accion = `<h2>El link venció</h2><p>El comprador no firmó a tiempo.</p><div class="btns"><button class="btn" data-act="enviar" type="button">Generar link nuevo</button></div>`; break;
-    case 'devuelta': accion = `<h2>Gerencia devolvió la propuesta</h2><div class="aviso err"><p>${esc((d.decision && d.decision.comentario) || 'Sin comentario.')}</p></div><p style="margin-top:12px">Corrígelo con el comprador y reabre la solicitud para generar un link nuevo.</p><div class="btns"><button class="btn" data-act="reabrir" type="button">Reabrir como borrador</button></div>`; break;
+  let accion = '', tablaSeccion = '';
+
+  if (d.estado_ui === 'borrador') {
+    /* ── tabla editable ── */
+    const izq = [...d.analisis.pendiente].sort((x, y) => x.fecha.localeCompare(y.fecha));
+    const v = izq.filter(p => p.vencida).length;
+    const pl = UI.PL.items.length ? UI.PL.items : d.propuesta;
+    const maxRows = Math.max(izq.length, v + pl.length);
+    let filasEdit = '';
+    for (let i = 0; i < maxRows; i++) {
+      const l = izq[i];
+      const pi = i >= v ? i - v : null;
+      const p = pi !== null && pi < pl.length ? pl[pi] : null;
+      filasEdit += `<tr>
+        <td class="${l && l.vencida ? 'venc' : ''}">${l ? dmy(l.fecha) : ''}</td>
+        <td class="der ${l && l.vencida ? 'venc' : ''}">${l ? num(l.valor) : ''}</td>
+        <td class="lado">${p ? `<input class="plan-inp" type="date" data-pi="${pi}" data-pk="fecha" value="${p.fecha}">` : ''}</td>
+        <td>${p ? `<input class="plan-inp der" type="number" data-pi="${pi}" data-pk="valor" value="${Math.round(p.valor)}" min="0" step="1000">` : ''}</td>
+        <td style="text-align:right;padding:8px 4px">${p ? `<button class="txt-btn" data-act="del-fila" data-pi="${pi}" style="color:var(--sobre);font-weight:700;line-height:1;padding:2px 4px;text-decoration:none" aria-label="Eliminar fila ${pi + 1}" type="button">×</button>` : ''}</td>
+      </tr>`;
+    }
+    if (d.analisis.credito > 0) {
+      filasEdit += `<tr><td>Crédito</td><td class="der">${num(d.analisis.credito)}</td><td class="lado" colspan="3" style="color:#52646C;font-size:13.5px;padding:8px 6px">Se recalcula si la propuesta supera el capital</td></tr>`;
+    }
+    const totProp = pl.reduce((s, x) => s + (Number(x.valor) || 0), 0);
+    const evalRes = UI.PL.resultado ? _evalResHTML(UI.PL.resultado) : '';
+    tablaSeccion = `<section class="card">
+      <table class="tabla comp" style="table-layout:fixed"><colgroup><col style="width:82px"><col style="width:90px"><col style="width:116px"><col style="width:116px"><col style="width:32px"></colgroup>
+        <thead><tr><th colspan="2">Plan actual</th><th colspan="3" class="lado">Propuesta</th></tr>
+        <tr><th scope="col">Fecha</th><th scope="col" class="der">Valor</th><th scope="col" class="lado">Fecha</th><th scope="col" class="der">Valor</th><th></th></tr></thead>
+        <tbody>${filasEdit}</tbody>
+        <tfoot><tr><td>Total</td><td class="der">${num(d.analisis.saldo + d.analisis.credito)}</td><td class="lado">Total</td><td class="der">${num(totProp + d.analisis.credito)}</td>
+          <td style="text-align:right;padding:8px 4px"><button class="txt-btn" data-act="add-fila" style="font-weight:700;font-size:18px;padding:0 6px;text-decoration:none" title="Agregar cuota" type="button">+</button></td></tr></tfoot>
+      </table>
+      ${d.analisis.vencido > 0 ? `<div class="aviso mora" style="margin-top:14px"><p><b>${fmt(d.analisis.vencido)} vencidos</b> (en rojo) van en la primera cuota de la propuesta.${d.analisis.mora > 0 ? ` Mora causada ${fmt(d.analisis.mora)}: la liquida IngeMAX aparte.` : ''}</p></div>` : ''}
+      <div id="eval-res"${evalRes ? ' style="margin-top:12px"' : ''}>${evalRes}</div>
+    </section>`;
+    accion = `<h2>Ajusta el plan</h2><p>El comprador solo revisa y firma; no puede editar.</p>
+      <div class="btns">
+        <button class="btn sec" data-act="guardar-plan" type="button" ${UI.ocupado ? 'disabled' : ''}>Guardar borrador</button>
+        <button class="btn" data-act="guardar-enviar" type="button" ${UI.ocupado ? 'disabled' : ''}>Guardar y enviar</button>
+      </div>
+      <p style="margin:10px 0 0;font-size:13px;color:#52646C">Si el ajuste supera el umbral del proyecto (${fmt(d.umbral)}), gerencia deberá aprobarlo antes de que el comprador lo firme.</p>`;
+
+  } else {
+    /* ── tabla de solo lectura ── */
+    const izq = [...d.analisis.pendiente].sort((x, y) => x.fecha.localeCompare(y.fecha));
+    const der = [...d.propuesta].sort((x, y) => x.fecha.localeCompare(y.fecha));
+    const v = izq.filter(p => p.vencida).length;
+    let filas = '';
+    for (let i = 0; i < Math.max(izq.length, v + der.length); i++) {
+      const l = izq[i], p = i >= v ? der[i - v] : null;
+      filas += `<tr><td class="${l && l.vencida ? 'venc' : ''}">${l ? dmy(l.fecha) : ''}</td><td class="der ${l && l.vencida ? 'venc' : ''}">${l ? num(l.valor) : ''}</td><td class="lado">${p ? dmy(p.fecha) : ''}</td><td class="der">${p ? num(p.valor) : ''}</td></tr>`;
+    }
+    if (d.analisis.credito > 0) filas += `<tr><td>Crédito</td><td class="der">${num(d.analisis.credito)}</td><td class="lado">Crédito</td><td class="der">${num(d.nuevo_credito)}</td></tr>`;
+    tablaSeccion = `<section class="card"><table class="tabla comp">
+        <thead><tr><th colspan="2">Plan actual</th><th colspan="2" class="lado">Propuesta</th></tr>
+        <tr><th scope="col">Fecha</th><th scope="col" class="der">Valor</th><th scope="col" class="lado">Fecha</th><th scope="col" class="der">Valor</th></tr></thead>
+        <tbody>${filas}</tbody>
+        <tfoot><tr><td>Total</td><td class="der">${num(d.analisis.saldo + d.analisis.credito)}</td><td class="lado">Total</td><td class="der">${num(r.tot_prop + d.nuevo_credito)}</td></tr></tfoot>
+      </table>
+      ${d.analisis.vencido > 0 ? `<div class="aviso mora" style="margin-top:14px"><p><b>${fmt(d.analisis.vencido)} vencidos</b> (en rojo) se pagan en la primera cuota de la propuesta.${d.analisis.mora > 0 ? ` Mora causada ${fmt(d.analisis.mora)}: la liquida IngeMAX aparte.` : ''}</p></div>` : ''}
+      ${r.excedente > 0 ? `<div class="aviso cred" style="margin-top:10px"><p><b>El crédito pasa de ${fmt(d.valor_credito)} a ${fmt(d.nuevo_credito)}.</b> El comprador debe informar al banco.</p></div>` : ''}
+    </section>`;
+
+    switch (d.estado_ui) {
+      case 'por_aprobar':
+        accion = `<h2>Esperando a gerencia</h2><p>El descuento supera el umbral del proyecto (${fmt(d.umbral)}), así que gerencia debe aprobarlo.</p>`;
+        break;
+      case 'por_enviar':
+        accion = `<h2>Aprobada. Envía al comprador</h2><p>Gerencia aprobó la propuesta. Genera el link para que el comprador la revise y firme.</p><div class="btns"><button class="btn" data-act="enviar_comprador" type="button">Enviar al comprador</button></div>`;
+        break;
+      case 'enviada':
+        accion = `<h2>Esperando la firma del comprador</h2><p>Comparte este link. Vence el ${fLarga(dia(d.vence_en))}.</p><div class="link-box"><input readonly value="${esc(url)}" aria-label="Link del comprador"><button class="btn sec" data-act="copiar-link" type="button">Copiar</button></div>`;
+        break;
+      case 'por_cargar':
+        accion = `<h2>Carga el plan en IngeMAX</h2><p>Usa estos conceptos tal cual: deben coincidir exactamente.</p>
+          <table class="carga"><thead><tr><th>Concepto</th><th>Fecha</th><th class="der">Valor</th><th><span class="sr">Copiar</span></th></tr></thead><tbody>${d.lineas_carga.map((l, i) => `<tr class="${l.ajuste ? 'ajuste' : ''}"><td>${esc(l.concepto)}</td><td>${dmy(l.fecha)}</td><td class="der">${l.valor < 0 ? '−' : ''}${num(l.valor)}</td><td class="der"><button class="txt-btn cp" data-copia="${i}" type="button" aria-label="Copiar línea ${i + 1}">Copiar</button></td></tr>`).join('')}</tbody></table>
+          ${r.excedente > 0 ? `<div class="aviso cred" style="margin-top:12px"><p><b>Actualiza también el crédito:</b> de ${fmt(d.valor_credito)} a ${fmt(d.nuevo_credito)}.</p></div>` : ''}
+          <div class="btns"><button class="btn sec" data-act="copiar-todo" type="button">Copiar todas las líneas</button><button class="btn" data-act="cargado" type="button">Ya la cargué en IngeMAX</button></div>`;
+        break;
+      case 'cargada': {
+        const V = UI.verif[d.id];
+        accion = `<h2>Verifica contra IngeMAX</h2><p>Comparamos el plan que cargaste con lo que firmó el comprador.</p><div class="btns"><button class="btn" data-act="verificar" type="button">${V ? 'Volver a verificar' : 'Verificar ahora'}</button></div>
+          ${V ? (V.ok ? '<div class="aviso ok" style="margin-top:12px"><p><b>Todo coincide.</b></p></div>' : `<div class="aviso err" style="margin-top:12px" role="alert"><p><b>Hay ${V.diferencias} diferencia${V.diferencias === 1 ? '' : 's'}.</b> Corrígelas en IngeMAX y vuelve a verificar.</p></div>`) +
+            `<ul class="verif">${V.items.map(i => `<li><span class="${i.ok ? 'si' : 'no'}">${i.ok ? '✓' : '✕'}</span><span>${i.fecha ? dmy(i.fecha) + ' · ' : ''}${esc(i.concepto)} · esperado ${fmt(i.valor)}${i.ok ? '' : (i.visto == null ? ', no aparece en IngeMAX' : `, en IngeMAX ${fmt(i.visto)}`)}</span></li>`).join('')}</ul>` : ''}`;
+        break; }
+      case 'verificada':
+        accion = `<h2>Solicitud cerrada</h2><div class="aviso ok"><p>El plan cargado en IngeMAX coincide con lo que firmó el comprador.</p></div>`;
+        break;
+      case 'vencida':
+        accion = `<h2>El link venció</h2><p>El comprador no firmó a tiempo.</p><div class="btns"><button class="btn" data-act="reabrir" type="button">Reabrir como borrador</button></div>`;
+        break;
+      case 'devuelta':
+        accion = `<h2>Gerencia devolvió la propuesta</h2><div class="aviso err"><p>${esc((d.decision && d.decision.comentario) || 'Sin comentario.')}</p></div><p style="margin-top:12px">Ajusta el plan y reabre la solicitud.</p><div class="btns"><button class="btn" data-act="reabrir" type="button">Reabrir como borrador</button></div>`;
+        break;
+      case 'rechazada_comprador':
+        accion = `<h2>El comprador rechazó la propuesta</h2>${d.rechazo && d.rechazo.observacion ? `<div class="aviso err"><p>${esc(d.rechazo.observacion)}</p></div>` : ''}<p style="margin-top:12px">Ajusta el plan y reabre la solicitud.</p><div class="btns"><button class="btn" data-act="reabrir" type="button">Reabrir como borrador</button></div>`;
+        break;
+    }
   }
+
   const firma = d.firma ? `<section class="card"><h2>Firma del comprador</h2><dl class="datos"><div><dt>Firmante</dt><dd>${esc(d.firma.nombre)}</dd></div><div><dt>Fecha</dt><dd>${fLarga(dia(d.firma.fecha))}</dd></div><div><dt>IP</dt><dd>${esc(d.firma.ip || '—')}</dd></div><div><dt>Código SHA-256</dt><dd class="mono" title="${esc(d.firma.hash)}">${esc(d.firma.hash.slice(0, 16))}…</dd></div></dl></section>` : '';
   UI.det = d;
   $('#app').innerHTML = `
   <p class="migas"><a href="#/">← Solicitudes</a></p>
   <div class="cab"><div><h1>${esc(d.inmueble || 'Venta ' + d.id_venta)} · ${esc(d.comprador.nombre)}</h1><p>${esc(d.proyecto.nombre)} · Venta ${fmtM(d.valor_venta)} · Negocio ${d.id_venta}</p></div>
-    <span class="chip"><span class="punto ${d.estado_ui}"></span>${ESTADOS[d.estado_ui]}</span></div>
+    <span class="chip"><span class="punto ${d.estado_ui}"></span>${ESTADOS[d.estado_ui] || d.estado_ui}</span></div>
   <div class="cols"><div class="pila">
     <section class="card linea"><div class="fila-res"><span>${tipo === 'ahorro' ? 'El comprador ahorra' : tipo === 'sobre' ? 'El comprador paga de más' : 'Sin cambio en el valor'}</span>${tipo ? `<span class="cifra ${tipo}">${fmt(Math.abs(aj))}</span>` : ''}</div>
       ${lineaSVG(a, { propuesta: d.propuesta })}
       <ul class="leyenda"><li><span class="sw pag"></span>Pagado</li><li><span class="sw act"></span>Plan actual</li><li><span class="sw pro"></span>Propuesta</li>${a.credito > 0 ? '<li><span class="sw cre"></span>Crédito (recortado)</li>' : ''}</ul></section>
-    <section class="card"><table class="tabla comp"><thead><tr><th colspan="2">Plan actual</th><th colspan="2" class="lado">Propuesta</th></tr><tr><th scope="col">Fecha</th><th scope="col" class="der">Valor</th><th scope="col" class="lado">Fecha</th><th scope="col" class="der">Valor</th></tr></thead><tbody>${filas}</tbody>
-      <tfoot><tr><td>Total</td><td class="der">${num(d.analisis.saldo + d.analisis.credito)}</td><td class="lado">Total</td><td class="der">${num(r.tot_prop + d.nuevo_credito)}</td></tr></tfoot></table>
-      ${d.analisis.vencido > 0 ? `<div class="aviso mora" style="margin-top:14px"><p><b>${fmt(d.analisis.vencido)} vencidos</b> (en rojo) se pagan en la primera cuota de la propuesta.${d.analisis.mora > 0 ? ` Mora causada ${fmt(d.analisis.mora)}: la liquida IngeMAX aparte.` : ''}</p></div>` : ''}
-      ${r.excedente > 0 ? `<div class="aviso cred" style="margin-top:10px"><p><b>El crédito pasa de ${fmt(d.valor_credito)} a ${fmt(d.nuevo_credito)}.</b> El comprador debe informar al banco.</p></div>` : ''}</section>
+    ${tablaSeccion}
   </div><div class="pila">
     <section class="card accion">${accion}</section>
-    <section class="card"><h2>Avance</h2><ol class="tiempo">${tiempo}</ol></section>
+    <section class="card"><h2>Avance</h2><ol class="tiempo">${tiempoHTML}</ol></section>
     ${firma}
   </div></div>`;
 }
@@ -316,7 +489,6 @@ async function copiar(txt, msg) { try { await navigator.clipboard.writeText(txt)
 const lineaTxt = l => `${l.concepto}\t${dmy(l.fecha)}\t${l.valor}`;
 const idActual = () => (location.hash.match(/#\/s\/(.+)/) || [])[1];
 
-// ejecuta una acción de la API sobre la solicitud abierta y repinta con la respuesta
 async function sobreSolicitud(ruta, mensaje) {
   if (UI.ocupado) return; UI.ocupado = true;
   try { const d = await API.post(`/solicitudes/${idActual()}/${ruta}`); if (mensaje) toast(mensaje); pintarDetalle(d); }
@@ -341,7 +513,27 @@ document.addEventListener('click', async e => {
       catch (x) { if (x.status === 401) return mostrarError(x); toast(x.message); }
       finally { UI.ocupado = false; if (location.hash === '#/nueva') pintarNueva(); }
       break; }
-    case 'enviar': sobreSolicitud('enviar', 'Link generado.'); break;
+    case 'guardar-plan': guardarPlan(); break;
+    case 'guardar-enviar': guardarYEnviar(); break;
+    case 'add-fila': {
+      const pl = UI.PL.items;
+      const ult = pl[pl.length - 1];
+      let fecha = CORTE;
+      if (ult) {
+        const d2 = new Date(ult.fecha + 'T12:00:00Z');
+        d2.setMonth(d2.getMonth() + 1);
+        fecha = d2.toISOString().slice(0, 10);
+      }
+      pl.push({ fecha, valor: 0, concepto: '', abono: false, fijo: false });
+      pintarDetalle(UI.det);
+      break; }
+    case 'del-fila': {
+      const pi = Number(t.dataset.pi);
+      UI.PL.items.splice(pi, 1);
+      evalPlan();
+      pintarDetalle(UI.det);
+      break; }
+    case 'enviar_comprador': sobreSolicitud('enviar_comprador', 'Link enviado al comprador.'); break;
     case 'reabrir': sobreSolicitud('reabrir', 'Solicitud reabierta como borrador.'); break;
     case 'cargado': sobreSolicitud('cargada', 'Marcada como cargada.'); break;
     case 'copiar-link': copiar(location.origin + d.link, 'Link copiado.'); break;
@@ -359,6 +551,11 @@ document.addEventListener('input', e => {
   if (e.target.id === 'q') { UI.q = e.target.value; UI.enfocarQ = true; vistaBandeja().catch(mostrarError); }
   if (e.target.id === 'nq') { UI.nueva.q = e.target.value; UI.nueva.sel = null; UI.enfocarNQ = true; clearTimeout(temporizadorBusqueda); temporizadorBusqueda = setTimeout(buscarNegocios, 400); }
   if (e.target.id === 'correo') { UI.nueva.correo = e.target.value; const b = document.querySelector('[data-act=crear]'); if (b) b.disabled = !(UI.nueva.sel && correoValido(UI.nueva.correo)) || UI.ocupado; }
+  if (e.target.dataset.pi !== undefined && e.target.dataset.pk) {
+    const pi = Number(e.target.dataset.pi), pk = e.target.dataset.pk;
+    UI.PL.items[pi][pk] = pk === 'valor' ? Number(e.target.value) : e.target.value;
+    evalPlan();
+  }
 });
 document.addEventListener('change', e => { if (e.target.id === 'proy') { UI.nueva.proyecto = Number(e.target.value); UI.nueva.sel = null; UI.nueva.res = []; buscarNegocios(); } });
 

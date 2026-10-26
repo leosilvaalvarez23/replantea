@@ -24,7 +24,7 @@ comprador = Router(tags=["comprador"])      # sin sesión: acceso por token
 
 
 # ---------------------------------------------------------------------------
-# Esquemas de entrada
+# Esquemas
 # ---------------------------------------------------------------------------
 
 class CrearIn(Schema):
@@ -52,9 +52,12 @@ class PropuestaIn(Schema):
 
 
 class FirmaIn(Schema):
-    propuesta: List[CuotaIn]
     codigo: str
     acepta: bool
+
+
+class RechazoIn(Schema):
+    observacion: str
 
 
 # ---------------------------------------------------------------------------
@@ -70,12 +73,15 @@ def _dia(dt):
 
 
 def _eventos(s: Solicitud) -> list:
-    aprobada = s.estado in ("aprobada", "cargada", "verificada") and s.aprobada_por_id
+    aprobada_ok = s.aprobada_por_id and s.estado != "rechazada"
     pares = [
-        ("creada", s.creada_en), ("enviada", s.enviada_en), ("firmada", s.firmada_en),
-        ("aprobada", s.aprobada_en if aprobada else None),
+        ("creada", s.creada_en),
+        ("enviada", s.enviada_en),
+        ("aprobada", s.aprobada_en if aprobada_ok else None),
         ("devuelta", s.aprobada_en if s.estado == "rechazada" else None),
-        ("cargada", s.cargada_en), ("verificada", s.verificada_en),
+        ("firmada", s.firmada_en),
+        ("cargada", s.cargada_en),
+        ("verificada", s.verificada_en),
     ]
     return [{"t": t, "fecha": _dia(f)} for t, f in pares if f]
 
@@ -102,7 +108,8 @@ def _resumen(s: Solicitud) -> dict:
 def _detalle(s: Solicitud) -> dict:
     a, r = sv.evaluar(s, s.plan_propuesto)
     decision = None
-    if s.estado in ("aprobada", "rechazada", "cargada", "verificada") and s.aprobada_por_id:
+    if s.estado in ("aprobada", "rechazada", "pendiente_firma", "firmada",
+                    "rechazada_comprador", "cargada", "verificada") and s.aprobada_por_id:
         decision = {
             "por": s.aprobada_por.get_full_name() or s.aprobada_por.username,
             "fecha": _dia(s.aprobada_en), "comentario": s.decision_comentario,
@@ -113,12 +120,20 @@ def _detalle(s: Solicitud) -> dict:
             "nombre": s.firma_nombre, "documento": s.firma_documento, "ip": s.firma_ip,
             "hash": s.firma_hash, "fecha": _iso(s.firmada_en),
         }
+    rechazo = None
+    if s.estado == "rechazada_comprador":
+        rechazo = {"observacion": s.rechazo_observacion}
+
     return {
         **_resumen(s),
         "valor_venta": s.valor_venta, "valor_credito": s.valor_credito, "nuevo_credito": r.nuevo_cred,
         "umbral": round(s.valor_venta * s.proyecto.umbral_pct),
         "analisis": sv.analisis_a_dict(a), "propuesta": s.plan_propuesto, "resultado": sv.resultado_a_dict(r),
-        "eventos": _eventos(s), "firma": firma, "decision": decision,
+        "reglas": {
+            "cuota_min": s.proyecto.cuota_min, "concepto_abono": s.proyecto.concepto_abono,
+            "fecha_limite": a.fecha_limite, "hoy": sv.hoy(),
+        },
+        "eventos": _eventos(s), "firma": firma, "decision": decision, "rechazo": rechazo,
         "lineas_carga": sv.lineas_carga(s),
         "link": f"/comprador/{s.token_comprador}" if s.estado == "pendiente_firma" else None,
     }
@@ -141,10 +156,9 @@ def _obtener(request, solicitud_id: str) -> Solicitud:
 
 
 def _imx(llamada):
-    """Ejecuta una consulta a IngeMAX traduciendo sus fallas a errores HTTP claros."""
     try:
         return llamada()
-    except ValueError as e:                       # IMX_TOKEN sin configurar
+    except ValueError as e:
         raise HttpError(503, str(e))
     except Exception as e:
         raise HttpError(502, f"No pudimos consultar IngeMAX: {e}")
@@ -156,7 +170,6 @@ def _imx(llamada):
 
 @router.get("/negocios/buscar")
 def buscar_negocios(request, proyecto_id: int, q: str = ""):
-    """Negocios de un proyecto para armar una solicitud (resumen, sin el plan completo)."""
     proyecto = ProyectoConfig.objects.filter(id=proyecto_id, activo=True).first()
     if not proyecto or not proyecto.id_imx:
         raise HttpError(404, "Proyecto no encontrado o sin ID de IngeMAX.")
@@ -215,9 +228,34 @@ def detalle(request, solicitud_id: str):
     return _detalle(_obtener(request, solicitud_id))
 
 
+@router.post("/{solicitud_id}/evaluar")
+def evaluar_plan(request, solicitud_id: str, datos: PropuestaIn):
+    """Evalúa una propuesta sin guardarla (para feedback en tiempo real mientras el asesor edita)."""
+    s = _obtener(request, solicitud_id)
+    if s.estado != "borrador":
+        raise HttpError(409, "Solo se puede evaluar el plan de un borrador.")
+    a = sv.analisis_de(s)
+    propuesta = sv.normalizar_propuesta([c.dict() for c in datos.propuesta], a, s.proyecto)
+    _, r = sv.evaluar(s, propuesta)
+    return sv.resultado_a_dict(r)
+
+
+@router.patch("/{solicitud_id}/plan")
+def actualizar_plan(request, solicitud_id: str, datos: PropuestaIn):
+    """Asesor guarda el plan propuesto (solo en borrador)."""
+    s = _obtener(request, solicitud_id)
+    return _detalle(sv.actualizar_plan(s, [c.dict() for c in datos.propuesta]))
+
+
 @router.post("/{solicitud_id}/enviar")
 def enviar(request, solicitud_id: str):
     return _detalle(sv.enviar(_obtener(request, solicitud_id)))
+
+
+@router.post("/{solicitud_id}/enviar_comprador")
+def enviar_a_comprador(request, solicitud_id: str):
+    """Asesor envía el link al comprador después de que gerencia aprobó."""
+    return _detalle(sv.enviar_a_comprador(_obtener(request, solicitud_id)))
 
 
 @router.post("/{solicitud_id}/reabrir")
@@ -257,7 +295,6 @@ def devolver(request, solicitud_id: str, datos: DevolverIn):
 # ---------------------------------------------------------------------------
 
 def _ip(request) -> Optional[str]:
-    """IP del comprador. Caddy es el único que llega a la API y pone X-Forwarded-For."""
     crudo = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip() or request.META.get("REMOTE_ADDR", "")
     try:
         return str(ipaddress.ip_address(crudo))
@@ -266,7 +303,6 @@ def _ip(request) -> Optional[str]:
 
 
 def _limitar(clave: str, maximo: int, segundos: int, mensaje: str):
-    """Tope simple de intentos (por proceso). Evita abusar del envío de códigos por correo."""
     cache.add(clave, 0, timeout=segundos)
     try:
         usados = cache.incr(clave)
@@ -274,10 +310,6 @@ def _limitar(clave: str, maximo: int, segundos: int, mensaje: str):
         usados = 1
     if usados > maximo:
         raise sv.ErrorNegocio(429, mensaje)
-
-
-def _items(datos) -> list:
-    return [c.dict() for c in datos.propuesta]
 
 
 @comprador.get("/{token}")
@@ -296,38 +328,36 @@ def ver(request, token: str):
         a, r = sv.evaluar(s, s.plan_propuesto)
         base.update({
             "analisis": sv.analisis_a_dict(a), "propuesta": s.plan_propuesto, "resultado": sv.resultado_a_dict(r),
-            "reglas": {"cuota_min": s.proyecto.cuota_min, "concepto_abono": s.proyecto.concepto_abono,
-                       "fecha_limite": a.fecha_limite, "hoy": sv.hoy()},
         })
+    elif s.estado == "rechazada_comprador":
+        base["rechazo"] = {"observacion": s.rechazo_observacion}
     else:
-        base["firma"] = {"fecha": _iso(s.firmada_en), "hash": s.firma_hash,
-                         "ajuste": s.ajuste_final, "requiere_aprobacion": s.requiere_aprobacion}
+        base["firma"] = {
+            "fecha": _iso(s.firmada_en), "hash": s.firma_hash,
+            "ajuste": s.ajuste_final, "requiere_aprobacion": s.requiere_aprobacion,
+        }
     return base
 
 
-@comprador.post("/{token}/evaluar")
-def evaluar(request, token: str, datos: PropuestaIn):
-    """Recalcula una propuesta con las tasas del proyecto, que nunca salen del servidor."""
-    s = sv.solicitud_para_comprador(token)
-    sv.exigir_firmable(s)
-    propuesta = sv.normalizar_propuesta(_items(datos), sv.analisis_de(s), s.proyecto)
-    _, r = sv.evaluar(s, propuesta)
-    return sv.resultado_a_dict(r)
-
-
 @comprador.post("/{token}/codigo")
-def codigo(request, token: str, datos: PropuestaIn):
+def codigo(request, token: str):
     s = sv.solicitud_para_comprador(token)
     _limitar(f"otp:{s.id}", 5, 3600, "Pediste demasiados códigos. Intenta de nuevo en una hora.")
-    return sv.generar_codigo(s, _items(datos))
+    return sv.generar_codigo(s)
 
 
 @comprador.post("/{token}/firmar")
 def firmar(request, token: str, datos: FirmaIn):
     s = sv.solicitud_para_comprador(token)
-    firmada = sv.firmar(s.id, _items(datos), datos.codigo, datos.acepta, _ip(request))
+    firmada = sv.firmar(s.id, datos.codigo, datos.acepta, _ip(request))
     return {
         "estado_ui": sv.estado_ui(firmada), "firmada_en": _iso(firmada.firmada_en),
         "hash": firmada.firma_hash, "ajuste": firmada.ajuste_final,
         "requiere_aprobacion": firmada.requiere_aprobacion,
     }
+
+
+@comprador.post("/{token}/rechazar")
+def rechazar(request, token: str, datos: RechazoIn):
+    sv.rechazar_comprador(token, datos.observacion)
+    return {"ok": True}

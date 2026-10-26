@@ -210,164 +210,75 @@ h2{font:700 24px/1.1 var(--f-marca);color:var(--pizarra);letter-spacing:.01em}
 <script src="/app/motor.js"></script>
 <script src="/app/api.js"></script>
 <script>
-/* El cálculo lo hace el servidor: aquí solo se muestra y se edita. Las tasas nunca llegan al navegador. */
+/* El plan lo define el asesor. El comprador solo revisa, firma o rechaza. Las tasas nunca llegan al navegador. */
 const TOKEN = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '');
-const S = { paso: 'cargando', datos: null, A: null, reglas: null, propuesta: [], inicial: [], res: null, resOk: false, v: 0, errorEval: '', firma: null,
+const S = { paso: 'cargando', datos: null, A: null, res: null, firma: null, rechazo: { obs: '', error: '', ocupado: false },
   f: { acepto: false, paso: 1, enviadoA: '', codigoPrueba: null, code: '', error: '', ocupado: false } };
 
-const dmyc = s => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y.slice(2)}`; };
 const adaptar = an => ({ recaudo: an.recaudo, pend: an.pendiente, credito: an.credito, fechaCredito: an.fecha_credito,
-  saldo: an.saldo, vencido: an.vencido, mora: an.mora, totRec: an.pagado, fechaLimite: an.fecha_limite });
-const orden = () => [...S.propuesta].sort((x, y) => x.fecha.localeCompare(y.fecha));
-const items = () => S.propuesta.map(p => ({ fecha: p.fecha, valor: p.valor, concepto: p.concepto, abono: !!p.abono, fijo: !!p.fijo, orig: p.orig ?? null, orig_fecha: p.orig_fecha ?? null }));
-const copia = lista => lista.map(p => ({ ...p, id: nid() }));
-
-/* ═══════════ CÁLCULO LOCAL (solo lo inmediato) Y RESULTADO DEL SERVIDOR ═══════════ */
-// Lo que no necesita el motor se calcula al instante; el resultado financiero lo trae el servidor.
-function c() {
-  const totProp = S.propuesta.reduce((t, p) => t + p.valor, 0), dif = Math.round(S.A.saldo - totProp);
-  const excedente = Math.max(0, -dif), nuevoCred = Math.max(0, S.datos.valor_credito - excedente);
-  const r = S.res || { ajuste: 0, topado: false, tope: 0, requiere_aprobacion: false, errores: [] };
-  let errores = S.resOk ? r.errores : (dif > 1 ? [`Faltan ${fmt(dif)} por asignar a las cuotas.`] : []);
-  if (!S.resOk && S.errorEval) errores = [S.errorEval];
-  return { totProp, dif, excedente, nuevoCred, r, errores, listo: S.resOk && r.valido };
-}
+  saldo: an.saldo, vencido: an.vencido, mora: an.mora, totRec: an.pagado });
+const propOrd = () => [...S.datos.propuesta].sort((x, y) => x.fecha.localeCompare(y.fecha));
 const tipoDe = r => { const aj = r.ajuste; return { aj, tipo: aj <= -1 ? 'ahorro' : aj >= 1 ? 'sobre' : 'neutro' }; };
+const resumenBarra = tipo => tipo === 'ahorro' ? 'Ahorras' : tipo === 'sobre' ? 'Pagas de más' : 'Sin cambio en el valor';
 
-function cambio() {            // la propuesta cambió: se pide el resultado al servidor sin pisar lo que el comprador sigue escribiendo
-  S.v++; S.resOk = false; S.errorEval = '';
-  clearTimeout(S.t); S.t = setTimeout(evaluar, 250);
-}
-async function evaluar() {
-  const v = S.v;
-  try { const r = await API.post(`/comprador/${TOKEN}/evaluar`, { propuesta: items() }); if (v !== S.v) return; S.res = r; S.resOk = true; S.errorEval = ''; }
-  catch (e) { if (v !== S.v) return; if ([404, 409, 410].includes(e.status)) return errorDeLink(e); S.resOk = false; S.errorEval = e.message; }
-  if (S.paso === 'simular') renderSim();
-}
-function rebalancear() {
-  const libres = S.propuesta.filter(p => !p.fijo).sort((a, b) => a.fecha.localeCompare(b.fecha));
-  if (!libres.length) return;
-  const totFijos = S.propuesta.filter(p => p.fijo).reduce((t, p) => t + p.valor, 0);
-  const saldo = Math.max(0, S.A.saldo - totFijos), base = Math.floor(saldo / libres.length);
-  for (let i = 0; i < libres.length - 1; i++) libres[i].valor = base;
-  libres[libres.length - 1].valor = Math.round(saldo - base * (libres.length - 1));
-}
-
-/* ═══════════ NAVEGACIÓN ═══════════ */
 function setBar(html, tipo, texto, disabled, fn) {
   $('.barra').hidden = false; const m = $('#mini'); m.dataset.t = tipo || ''; m.innerHTML = html;
   const b = $('#btnFirmar'); b.textContent = texto; b.disabled = !!disabled; S.onBar = fn;
 }
 function ir(p) { S.paso = p; render(); window.scrollTo(0, 0); }
-function render() { ({ simular: renderSim, revisar: renderRev, firma: renderFirma, listo: renderListo })[S.paso](); }
+function render() { ({ revisar: renderRev, firma: renderFirma, rechazar: renderRechazar, listo: renderListo })[S.paso](); }
 function cabecera() { $('#inmueble').innerHTML = `<b>${esc(S.datos.inmueble)}</b><span>Valor de venta ${fmtM(S.datos.valor_venta)}</span>`; }
-const resumenBarra = tipo => tipo === 'ahorro' ? 'Ahorras' : tipo === 'sobre' ? 'Pagas de más' : 'Sin cambio en el valor';
 
 function errorDeLink(e) {
   $('.barra').hidden = true;
   const msg = e.status === 410 ? 'Este link venció. Pídele a tu asesor uno nuevo.'
     : e.status === 404 ? 'Este link no existe. Revisa que lo hayas copiado completo o pídele a tu asesor uno nuevo.'
-    : e.status === 409 ? 'Esta propuesta ya fue firmada.' : e.message;
-  $('#app').innerHTML = `<div class="solo"><section class="card ok"><h1 class="titulo">${e.status === 409 ? 'Propuesta firmada' : 'No pudimos abrir tu propuesta'}</h1><p>${esc(msg)}</p></section></div>`;
+    : e.status === 409 ? 'Esta propuesta ya no está disponible.' : e.message;
+  $('#app').innerHTML = `<div class="solo"><section class="card ok"><h1 class="titulo">No pudimos abrir tu propuesta</h1><p>${esc(msg)}</p></section></div>`;
 }
 
-/* ═══════════ 1. SIMULADOR ═══════════ */
-function renderSim() {
-  const a = S.A, k = c(), { aj, tipo } = tipoDe(k.r);
-  const frase = tipo === 'ahorro' ? 'Con esta propuesta ahorras' : tipo === 'sobre' ? 'Con esta propuesta pagas de más' : 'Esta propuesta no cambia el valor de tu plan';
-  const nota = k.r.topado ? `El descuento se limita al tope del proyecto (${fmt(k.r.tope)}).`
-    : tipo === 'ahorro' ? 'Es el descuento por adelantar pagos frente a tu plan actual.'
-    : tipo === 'sobre' ? 'Es el cargo financiero por aplazar pagos frente a tu plan actual.' : 'Mueve fechas o valores para ver el efecto.';
-  const hayAbonos = S.propuesta.some(p => p.abono), cols = hayAbonos ? 3 : 2;
-  const min = S.reglas.hoy, max = a.fechaLimite || '';
-  const filas = orden().map(p => `<tr data-id="${p.id}">
-      <td><input aria-label="${p.abono ? 'Fecha del abono' : 'Fecha de la cuota'}" id="f-${p.id}" type="date" value="${p.fecha}" min="${min}" ${max ? `max="${max}"` : ''} data-k="fecha"></td>
-      <td class="der"><input aria-label="Valor" id="v-${p.id}" inputmode="numeric" value="${num(p.valor)}" data-k="valor"></td>
-      ${hayAbonos ? `<td class="x">${p.abono ? `<button class="txt-btn" data-del="${p.id}" type="button" aria-label="Quitar abono">✕</button>` : ''}</td>` : ''}</tr>`).join('');
-  const credCambia = k.excedente > 0 && a.credito > 0;
-  const filaCred = a.credito > 0 ? `<tr class="fijo"><td>Crédito hipotecario<small>${dmy(a.fechaCredito)}</small></td>
-      <td class="der cifra-t" colspan="${cols - 1}">${credCambia ? `<small><del>${fmt(S.datos.valor_credito)}</del></small>` : ''}${fmt(k.nuevoCred)}</td></tr>` : '';
-  const moraHTML = a.mora > 0 || a.vencido > 0 ? `<div class="aviso mora">
-      ${a.vencido > 0 ? `<p><b>Tienes ${fmt(a.vencido)} vencidos.</b> Se pagan en tu primera cuota, por eso su valor es mayor.</p>` : ''}
-      ${a.mora > 0 ? `<p>Mora causada: <b>${fmt(a.mora)}</b>. La liquida IngeMAX y se cobra aparte; no se suma otra vez al cálculo.</p>` : ''}</div>` : '';
-  const credHTML = k.excedente > 0 ? `<div class="aviso cred"><p><b>Tu propuesta supera la cuota inicial en ${fmt(k.excedente)}.</b></p>
-      <p>Ese valor se abona al crédito: pasa de ${fmt(S.datos.valor_credito)} a ${fmt(k.nuevoCred)}. Debes informar el cambio a tu banco.</p></div>` : '';
-  const errHTML = k.errores.length ? `<div class="aviso err" role="alert"><p><b>Para continuar</b></p><ul>${k.errores.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>` : '';
-
-  const act = document.activeElement, foco = act && act.id;       // conserva el foco al volver a dibujar
-  cabecera();
-  $('#app').innerHTML = `
-  <div class="izq">
-    <section class="res ${S.resOk ? '' : 'calc'}" data-t="${tipo}" aria-label="Resultado" ${S.resOk ? '' : 'aria-busy="true"'}>
-      <p class="frase">${frase}</p><p class="cifra">${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</p><p class="nota">${nota}</p>
-    </section>
-    <section class="card linea" aria-label="Línea de pagos">
-      ${lineaSVG(a, { propuesta: S.propuesta })}
-      <ul class="leyenda"><li><span class="sw pag"></span>Pagado</li><li><span class="sw act"></span>Plan actual</li><li><span class="sw pro"></span>Tu propuesta</li>${a.credito > 0 ? '<li><span class="sw cre"></span>Crédito (recortado)</li>' : ''}</ul>
-    </section>
-    <section class="card" aria-label="Resumen">
-      <dl class="cifras">
-        <div class="pagado"><dt>Ya pagaste</dt><dd>${fmt(a.totRec)}</dd></div>
-        <div><dt>Te falta de la cuota inicial</dt><dd>${fmt(a.saldo)}</dd></div>
-        <div class="total"><dt>Tu propuesta suma</dt><dd>${fmt(k.totProp)}</dd></div>
-        ${a.credito > 0 ? `<div><dt>Crédito hipotecario</dt><dd>${credCambia ? `<small style="font-weight:400;font-size:13px;color:#52646C"><del>${fmt(S.datos.valor_credito)}</del></small> ` : ''}${fmt(k.nuevoCred)}</dd></div>` : ''}
-      </dl>
-    </section>
-  </div>
-  <div class="der">
-    ${moraHTML}${credHTML}
-    <section class="card" aria-label="Cuotas">
-      <div class="cab-cuotas"><h2>Tus cuotas</h2>
-        <div class="acciones"><button class="txt-btn" id="btnAbono" type="button">Agregar abono</button><button class="txt-btn" id="btnReset" type="button">Restablecer</button></div></div>
-      <table class="tabla">
-        <thead><tr><th scope="col">Fecha</th><th scope="col" class="der">Valor</th>${hayAbonos ? '<th scope="col"><span class="sr">Acciones</span></th>' : ''}</tr></thead>
-        <tbody>${filas}${filaCred}</tbody>
-        <tfoot><tr><td>Total por pagar</td><td class="der cifra-t" colspan="${cols - 1}">${fmt(k.totProp + k.nuevoCred)}</td></tr></tfoot>
-      </table>
-    </section>
-    ${errHTML}
-  </div>`;
-  setBar(`<small>${resumenBarra(tipo)}</small><strong>${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</strong>`, tipo, 'Revisar y firmar', !k.listo, () => ir('revisar'));
-  if (foco) { const el = document.getElementById(foco); if (el) el.focus(); }
-}
-
-/* ═══════════ 2. REVISIÓN ═══════════ */
+/* ═══════════ 1. REVISIÓN (solo lectura) ═══════════ */
 function renderRev() {
-  const a = S.A, k = c(), { aj, tipo } = tipoDe(k.r);
-  const izq = [...a.pend].sort((x, y) => x.fecha.localeCompare(y.fecha)), der = orden(), v = izq.filter(p => p.vencida).length;
+  const a = S.A, r = S.res, { aj, tipo } = tipoDe(r);
+  const excedente = r.excedente || 0, nuevoCred = r.nuevo_credito;
+  const izq = [...a.pend].sort((x, y) => x.fecha.localeCompare(y.fecha)), der = propOrd(), v = izq.filter(p => p.vencida).length;
   const n = Math.max(izq.length, v + der.length); let filas = '';
   for (let i = 0; i < n; i++) {
-    const l = izq[i], r = i >= v ? der[i - v] : null;
+    const l = izq[i], p = i >= v ? der[i - v] : null;
+    const dmyc = s => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y.slice(2)}`; };
     filas += `<tr><td${l && l.vencida ? ' class="venc"' : ''}>${l ? dmyc(l.fecha) : ''}</td><td class="der${l && l.vencida ? ' venc' : ''}">${l ? num(l.valor) : ''}</td>
-      <td class="lado">${r ? dmyc(r.fecha) : ''}</td><td class="der">${r ? num(r.valor) : ''}</td></tr>`;
+      <td class="lado">${p ? dmyc(p.fecha) : ''}</td><td class="der">${p ? num(p.valor) : ''}</td></tr>`;
   }
-  const cred = a.credito > 0 ? `<tr class="sep"><td>Crédito</td><td class="der">${num(a.credito)}</td><td class="lado">Crédito</td><td class="der">${num(k.nuevoCred)}</td></tr>` : '';
+  const cred = a.credito > 0 ? `<tr class="sep"><td>Crédito</td><td class="der">${num(a.credito)}</td><td class="lado">Crédito</td><td class="der">${num(nuevoCred)}</td></tr>` : '';
   const avisos = [
-    a.vencido > 0 ? `<div class="aviso mora"><p><b>Tus ${fmt(a.vencido)} vencidos</b> se pagan en la primera cuota de tu propuesta.</p>${a.mora > 0 ? `<p>La mora causada (${fmt(a.mora)}) la liquida IngeMAX por separado.</p>` : ''}</div>` : '',
-    k.excedente > 0 ? `<div class="aviso cred"><p><b>Tu crédito hipotecario pasa de ${fmt(S.datos.valor_credito)} a ${fmt(k.nuevoCred)}.</b></p><p>Debes informar este cambio a tu banco.</p></div>` : '',
-    k.r.requiere_aprobacion ? `<div class="aviso cred"><p><b>Gerencia debe aprobar tu propuesta.</b> Por el valor del descuento, la aprobación es previa a que se cargue el nuevo plan.</p></div>` : ''].join('');
+    a.vencido > 0 ? `<div class="aviso mora"><p><b>Tus ${fmt(a.vencido)} vencidos</b> se pagan en la primera cuota de esta propuesta.</p>${a.mora > 0 ? `<p>La mora causada (${fmt(a.mora)}) la liquida IngeMAX por separado.</p>` : ''}</div>` : '',
+    excedente > 0 && a.credito > 0 ? `<div class="aviso cred"><p><b>Tu crédito hipotecario pasa de ${fmt(S.datos.valor_credito)} a ${fmt(nuevoCred)}.</b></p><p>Debes informar este cambio a tu banco.</p></div>` : '',
+  ].join('');
   cabecera();
   $('#app').innerHTML = `<div class="solo">
-    <h1 class="titulo">Revisa tu propuesta</h1>
-    <section class="res" data-t="${tipo}" aria-label="Resultado"><p class="frase">${tipo === 'ahorro' ? 'Con esta propuesta ahorras' : tipo === 'sobre' ? 'Con esta propuesta pagas de más' : 'Esta propuesta no cambia el valor de tu plan'}</p><p class="cifra">${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</p></section>
+    <h1 class="titulo">Revisa la propuesta</h1>
+    <section class="res" data-t="${tipo}" aria-label="Resultado">
+      <p class="frase">${tipo === 'ahorro' ? 'Con esta propuesta ahorras' : tipo === 'sobre' ? 'Con esta propuesta pagas de más' : 'Esta propuesta no cambia el valor de tu plan'}</p>
+      <p class="cifra">${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</p>
+      <p class="nota">${r.topado ? `El descuento se limita al tope del proyecto (${fmt(r.tope)}).` : tipo === 'ahorro' ? 'Descuento por adelantar pagos frente a tu plan actual.' : tipo === 'sobre' ? 'Cargo financiero por aplazar pagos.' : ''}</p>
+    </section>
     <section class="card ajustada" aria-label="Comparación">
       <table class="tabla comp">
         <colgroup><col style="width:19%"><col style="width:31%"><col style="width:19%"><col style="width:31%"></colgroup>
-        <thead><tr><th colspan="2" scope="colgroup">Plan actual</th><th colspan="2" scope="colgroup" class="lado">Tu propuesta</th></tr>
+        <thead><tr><th colspan="2" scope="colgroup">Plan actual</th><th colspan="2" scope="colgroup" class="lado">Propuesta del asesor</th></tr>
           <tr class="sub"><th>Fecha</th><th class="der">Valor</th><th class="lado">Fecha</th><th class="der">Valor</th></tr></thead>
         <tbody>${filas}${cred}</tbody>
-        <tfoot><tr><td>Total</td><td class="der">${num(a.saldo + a.credito)}</td><td class="lado">Total</td><td class="der">${num(k.totProp + k.nuevoCred)}</td></tr></tfoot>
+        <tfoot><tr><td>Total</td><td class="der">${num(a.saldo + a.credito)}</td><td class="lado">Total</td><td class="der">${num(r.tot_prop + nuevoCred)}</td></tr></tfoot>
       </table>
-      ${a.vencido > 0 ? '<p class="sub-t">En rojo, las cuotas vencidas: se pagan en la primera cuota de tu propuesta.</p>' : ''}
+      ${a.vencido > 0 ? '<p class="sub-t">En rojo, las cuotas vencidas: se pagan en la primera cuota de la propuesta.</p>' : ''}
     </section>
     ${avisos}
-    <p><button class="txt-btn" data-act="editar" type="button">Volver a editar</button></p>
   </div>`;
-  setBar(`<small>${resumenBarra(tipo)}</small><strong>${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</strong>`, tipo, 'Continuar a firmar', false,
+  setBar(`<small>${resumenBarra(tipo)}</small><strong>${tipo === 'neutro' ? '$ 0' : fmt(Math.abs(aj))}</strong>`, tipo, 'Firmar propuesta', false,
     () => { S.f = { acepto: false, paso: 1, enviadoA: '', codigoPrueba: null, code: '', error: '', ocupado: false }; ir('firma'); });
 }
 
-/* ═══════════ 3. FIRMA ═══════════ */
+/* ═══════════ 2. FIRMA ═══════════ */
 function renderFirma() {
   const f = S.f, P = S.datos.comprador;
   const pasos = `<ol class="pasos"><li class="${f.paso > 1 ? 'hecho' : ''}" ${f.paso === 1 ? 'aria-current="step"' : ''}>1. Aceptar</li><li ${f.paso === 2 ? 'aria-current="step"' : ''}>2. Código</li></ol>`;
@@ -384,14 +295,17 @@ function renderFirma() {
     <p><button class="txt-btn" data-act="reenviar" type="button" ${f.ocupado ? 'disabled' : ''}>Enviar un código nuevo</button></p>`;
   cabecera();
   $('#app').innerHTML = `<div class="solo"><h1 class="titulo">Firma tu propuesta</h1>${pasos}<section class="card firma">${cuerpo}</section>
-    <p><button class="txt-btn" data-act="${f.paso === 1 ? 'revisar' : 'paso1'}" type="button">${f.paso === 1 ? 'Volver a la revisión' : 'Volver al paso 1'}</button></p></div>`;
+    <p style="display:flex;gap:16px;flex-wrap:wrap">
+      <button class="txt-btn" data-act="${f.paso === 1 ? 'revisar' : 'paso1'}" type="button">${f.paso === 1 ? 'Volver a la revisión' : 'Volver al paso 1'}</button>
+      ${f.paso === 1 ? `<button class="txt-btn" data-act="rechazar" type="button" style="color:var(--sobre)">Rechazar propuesta</button>` : ''}
+    </p></div>`;
   if (f.paso === 1) setBar('<small>Siguiente</small><strong>Código</strong>', '', f.ocupado ? 'Enviando…' : 'Enviar código', !f.acepto || f.ocupado, pedirCodigo);
   else setBar('<small>Último paso</small><strong>Firma</strong>', '', f.ocupado ? 'Firmando…' : 'Firmar propuesta', f.code.length !== 6 || f.ocupado, firmar);
 }
 async function pedirCodigo() {
   const f = S.f; if (f.ocupado) return; f.ocupado = true; f.error = ''; renderFirma();
   try {
-    const r = await API.post(`/comprador/${TOKEN}/codigo`, { propuesta: items() });
+    const r = await API.post(`/comprador/${TOKEN}/codigo`);
     f.enviadoA = r.enviado_a; f.codigoPrueba = r.codigo_prueba; f.paso = 2; f.code = '';
   } catch (e) {
     if ([404, 409, 410].includes(e.status)) { f.ocupado = false; return errorDeLink(e); }
@@ -402,7 +316,7 @@ async function pedirCodigo() {
 async function firmar() {
   const f = S.f; if (f.ocupado) return; f.ocupado = true; f.error = ''; renderFirma();
   try {
-    const r = await API.post(`/comprador/${TOKEN}/firmar`, { propuesta: items(), codigo: f.code, acepta: f.acepto });
+    const r = await API.post(`/comprador/${TOKEN}/firmar`, { codigo: f.code, acepta: f.acepto });
     S.firma = { hash: r.hash, fecha: r.firmada_en, ajuste: r.ajuste, requiere_aprobacion: r.requiere_aprobacion };
     f.ocupado = false; return ir('listo');
   } catch (e) {
@@ -413,11 +327,48 @@ async function firmar() {
   const el = $('#otp'); if (el) el.focus();
 }
 
+/* ═══════════ 3. RECHAZO ═══════════ */
+function renderRechazar() {
+  const rc = S.rechazo;
+  const err = rc.error ? `<div class="aviso err" role="alert"><p>${esc(rc.error)}</p></div>` : '';
+  cabecera(); $('.barra').hidden = true;
+  $('#app').innerHTML = `<div class="solo">
+    <h1 class="titulo">Rechazar propuesta</h1>
+    <section class="card">
+      <p>Cuéntale al asesor por qué rechazas esta propuesta para que pueda ajustarla.</p>
+      <div class="campo" style="margin-top:12px">
+        <label for="obs-rechazo" style="font-size:13.5px;color:#41545D;font-weight:500">Observación</label>
+        <textarea id="obs-rechazo" rows="4" style="width:100%;min-height:100px;padding:10px 12px;border:1.5px solid var(--linea);border-radius:var(--radio-m);font:inherit;resize:vertical"
+          placeholder="Ej: No estoy de acuerdo con la fecha de la primera cuota…">${esc(rc.obs)}</textarea>
+      </div>
+      ${err}
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
+        <button class="btn" data-act="confirmar-rechazo" type="button" ${rc.ocupado || rc.obs.trim().length < 10 ? 'disabled' : ''}>${rc.ocupado ? 'Enviando…' : 'Confirmar rechazo'}</button>
+        <button class="btn sec" data-act="revisar" type="button" ${rc.ocupado ? 'disabled' : ''}>Volver a la revisión</button>
+      </div>
+    </section>
+  </div>`;
+}
+async function rechazar() {
+  const rc = S.rechazo; if (rc.ocupado) return; rc.ocupado = true; rc.error = ''; renderRechazar();
+  try {
+    await API.post(`/comprador/${TOKEN}/rechazar`, { observacion: rc.obs.trim() });
+    $('.barra').hidden = true;
+    $('#app').innerHTML = `<div class="solo"><section class="card ok">
+      <h1 class="titulo">Propuesta rechazada</h1>
+      <p>Le enviamos tu observación al asesor para que ajuste la propuesta.</p>
+      <p style="margin-top:8px;color:#52646C;font-size:14px">"${esc(rc.obs.trim())}"</p>
+    </section></div>`;
+  } catch (e) {
+    rc.error = e.message; rc.ocupado = false; renderRechazar();
+  }
+}
+
 /* ═══════════ 4. CONFIRMACIÓN ═══════════ */
 function renderListo() {
   const F = S.firma, aj = F.ajuste, tipo = aj <= -1 ? 'ahorro' : aj >= 1 ? 'sobre' : 'neutro';
   const cuando = new Date(F.fecha).toLocaleString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-  const sigue = [F.requiere_aprobacion ? 'Gerencia revisa y aprueba tu propuesta.' : null, 'Tu asesor carga el nuevo plan en IngeMAX.', 'Verificamos que el plan cargado coincida con lo que firmaste.'].filter(Boolean);
+  const sigue = ['Tu asesor carga el nuevo plan en IngeMAX.', 'Verificamos que el plan cargado coincida con lo que firmaste.'];
   $('.barra').hidden = true; cabecera();
   $('#app').innerHTML = `<div class="solo">
     <section class="card ok" aria-label="Firma completada">
@@ -435,32 +386,22 @@ function renderListo() {
 
 /* ═══════════ EVENTOS ═══════════ */
 $('#app').addEventListener('change', e => {
-  if (e.target.id === 'acepto') { S.f.acepto = e.target.checked; $('#btnFirmar').disabled = !S.f.acepto; return; }
-  const row = e.target.closest('tr[data-id]'); if (!row) return;
-  const p = S.propuesta.find(x => x.id === row.dataset.id); if (!p) return;
-  if (e.target.dataset.k === 'fecha' && e.target.value) p.fecha = e.target.value;
-  if (e.target.dataset.k === 'valor') { p.valor = parseNum(e.target.value); p.fijo = true; rebalancear(); }
-  cambio(); renderSim();
+  if (e.target.id === 'acepto') { S.f.acepto = e.target.checked; const b = $('#btnFirmar'); if (b) b.disabled = !S.f.acepto; }
+});
+$('#app').addEventListener('input', e => {
+  if (e.target.id === 'otp') { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); S.f.code = e.target.value; const b = $('#btnFirmar'); if (b) b.disabled = S.f.code.length !== 6 || S.f.ocupado; }
+  if (e.target.id === 'obs-rechazo') { S.rechazo.obs = e.target.value; const b = document.querySelector('[data-act=confirmar-rechazo]'); if (b) b.disabled = S.rechazo.obs.trim().length < 10 || S.rechazo.ocupado; }
 });
 $('#app').addEventListener('click', async e => {
-  const t = e.target;
-  if (t.id === 'btnReset') { S.propuesta = copia(S.inicial); cambio(); renderSim(); toast('Plan restablecido'); return; }
-  if (t.id === 'btnAbono') {
-    const f = addM(1, 15), fecha = f < S.reglas.hoy || (S.A.fechaLimite && f > S.A.fechaLimite) ? S.reglas.hoy : f;
-    S.propuesta.push({ id: nid(), fecha, concepto: S.reglas.concepto_abono, valor: S.reglas.cuota_min, fijo: true, abono: true });
-    rebalancear(); cambio(); renderSim(); return;
-  }
-  if (t.dataset.del) { S.propuesta = S.propuesta.filter(p => p.id !== t.dataset.del); rebalancear(); cambio(); renderSim(); return; }
-  const act = t.dataset.act; if (!act) return;
-  if (act === 'editar') ir('simular');
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act;
   if (act === 'revisar') ir('revisar');
+  if (act === 'rechazar') { S.rechazo = { obs: '', error: '', ocupado: false }; ir('rechazar'); }
+  if (act === 'confirmar-rechazo') rechazar();
   if (act === 'paso1') { S.f.paso = 1; S.f.error = ''; renderFirma(); }
   if (act === 'reenviar') { await pedirCodigo(); if (!S.f.error) toast('Enviamos un código nuevo.'); }
   if (act === 'imprimir') window.print();
   if (act === 'hash') { try { await navigator.clipboard.writeText(S.firma.hash); toast('Código copiado.'); } catch (err) { toast('No se pudo copiar. Selecciónalo y cópialo a mano.'); } }
-});
-$('#app').addEventListener('input', e => {
-  if (e.target.id === 'otp') { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); S.f.code = e.target.value; $('#btnFirmar').disabled = S.f.code.length !== 6 || S.f.ocupado; }
 });
 $('#btnFirmar').addEventListener('click', () => S.onBar && S.onBar());
 
@@ -469,14 +410,22 @@ $('#btnFirmar').addEventListener('click', () => S.onBar && S.onBar());
   try {
     const d = await API.get('/comprador/' + encodeURIComponent(TOKEN));
     S.datos = d;
-    if (d.estado_ui !== 'enviada') {      // ya firmada (o en otro punto del trámite): se muestra el comprobante
+    if (d.estado_ui === 'enviada') {
+      S.A = adaptar(d.analisis);
+      S.res = d.resultado;
+      S.paso = 'revisar';
+    } else if (d.estado_ui === 'rechazada_comprador') {
+      $('.barra').hidden = true; cabecera();
+      $('#app').innerHTML = `<div class="solo"><section class="card ok"><h1 class="titulo">Propuesta rechazada</h1>
+        <p>Ya enviaste tu rechazo al asesor. Espera a que ajuste la propuesta y te envíe un link nuevo.</p>
+        ${d.rechazo ? `<p style="margin-top:8px;color:#52646C;font-size:14px;font-style:italic">"${esc(d.rechazo.observacion)}"</p>` : ''}
+      </section></div>`;
+      return;
+    } else {
       S.firma = { hash: d.firma.hash, fecha: d.firma.fecha, ajuste: d.firma.ajuste, requiere_aprobacion: d.firma.requiere_aprobacion };
-      S.paso = 'listo'; return render();
+      S.paso = 'listo';
     }
-    S.A = adaptar(d.analisis); S.reglas = d.reglas;
-    S.propuesta = copia(d.propuesta); S.inicial = copia(d.propuesta);
-    S.res = d.resultado; S.resOk = true; S.paso = 'simular';
-    render();
+    cabecera(); render();
   } catch (e) { errorDeLink(e); }
 })();
 </script>

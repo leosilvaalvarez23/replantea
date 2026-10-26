@@ -1,8 +1,13 @@
 """Reglas de negocio de las solicitudes (sin HTTP).
 
-El servidor es la fuente de verdad: todo lo que el comprador ve y firma se
-recalcula aquí con el motor de `engine/`, sobre la foto del negocio guardada
-en la solicitud.
+Flujo nuevo:
+  borrador → enviar → pendiente_aprobacion (si requiere) o pendiente_firma
+  pendiente_aprobacion → aprobar → aprobada → enviar_a_comprador → pendiente_firma
+  pendiente_aprobacion → devolver → rechazada → reabrir → borrador
+  pendiente_firma → firmar → firmada → cargada → verificada
+  pendiente_firma → rechazar_comprador → rechazada_comprador → reabrir → borrador
+
+El asesor edita el plan en borrador. El comprador solo firma o rechaza.
 """
 import hashlib
 import hmac
@@ -23,12 +28,10 @@ from .models import Solicitud
 LINK_DIAS = 7
 OTP_MINUTOS = 10
 OTP_MAX_INTENTOS = 5
-ESTADOS_ABIERTOS_PARA_DUPLICADO = ("verificada", "rechazada")
+ESTADOS_ABIERTOS_PARA_DUPLICADO = ("verificada", "rechazada", "rechazada_comprador")
 
 
 class ErrorNegocio(Exception):
-    """Error esperado de una regla de negocio; la API lo convierte en HTTP."""
-
     def __init__(self, status: int, mensaje: str, detalle=None):
         super().__init__(mensaje)
         self.status = status
@@ -57,16 +60,16 @@ def vencido_el_link(s: Solicitud) -> bool:
 
 
 def estado_ui(s: Solicitud) -> str:
-    """Estado tal como lo muestran las pantallas."""
     if vencido_el_link(s):
         return "vencida"
     return {
         "borrador": "borrador",
-        "pendiente_firma": "enviada",
-        "firmada": "por_cargar",          # firmada y no requiere aprobación
         "pendiente_aprobacion": "por_aprobar",
-        "aprobada": "por_cargar",
+        "aprobada": "por_enviar",
         "rechazada": "devuelta",
+        "pendiente_firma": "enviada",
+        "firmada": "por_cargar",
+        "rechazada_comprador": "rechazada_comprador",
         "cargada": "cargada",
         "verificada": "verificada",
     }[s.estado]
@@ -80,7 +83,6 @@ def enmascarar_correo(correo: str) -> str:
 
 
 def corte_de(s: Solicitud) -> str:
-    """Fecha de referencia del análisis: la firma, si ya se firmó; si no, hoy."""
     return timezone.localtime(s.firmada_en).date().isoformat() if s.firmada_en else hoy()
 
 
@@ -97,7 +99,6 @@ def conceptos_permitidos(a: AnalisisNegocio, proyecto) -> set:
 # ---------------------------------------------------------------------------
 
 def normalizar_propuesta(items, a: AnalisisNegocio, proyecto) -> list:
-    """Valida el formato de lo que llega del navegador y lo deja en forma canónica."""
     if not items:
         raise ErrorNegocio(422, "La propuesta no tiene cuotas.")
     if len(items) > 120:
@@ -117,7 +118,6 @@ def normalizar_propuesta(items, a: AnalisisNegocio, proyecto) -> list:
         if concepto not in permitidos:
             raise ErrorNegocio(422, f"El concepto «{concepto}» no está permitido en este proyecto.")
         extra = {}
-        # ayudas de la interfaz (qué era la cuota antes de editarla); no afectan el cálculo
         try:
             if it.get("orig") is not None and it.get("orig_fecha"):
                 date.fromisoformat(it["orig_fecha"])
@@ -129,7 +129,6 @@ def normalizar_propuesta(items, a: AnalisisNegocio, proyecto) -> list:
 
 
 def evaluar(s: Solicitud, propuesta: list):
-    """(analisis, resultado) de una propuesta ya normalizada, con las reglas del proyecto."""
     corte = corte_de(s)
     a = analizar(s.negocio, corte)
     return a, calcular(propuesta, a, s.negocio, cfg_de(s.proyecto), corte)
@@ -162,7 +161,7 @@ def analisis_a_dict(a: AnalisisNegocio) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Asesor
+# Asesor — crear y editar
 # ---------------------------------------------------------------------------
 
 def _texto(n: dict, *claves) -> str:
@@ -185,7 +184,6 @@ def crear_solicitud(usuario, proyecto, negocio: dict, correo: str = "") -> Solic
     )
     if abierta:
         raise ErrorNegocio(409, "Ese negocio ya tiene una solicitud abierta.")
-
     if not negocio.get("plan_pagos"):
         raise ErrorNegocio(422, "El negocio no tiene plan de pagos en IngeMAX.")
     if not negocio.get("valor_venta"):
@@ -209,31 +207,65 @@ def crear_solicitud(usuario, proyecto, negocio: dict, correo: str = "") -> Solic
     return s
 
 
+def actualizar_plan(s: Solicitud, propuesta_items: list) -> Solicitud:
+    """Asesor modifica el plan desde el borrador."""
+    if s.estado != "borrador":
+        raise ErrorNegocio(409, "Solo se puede editar el plan de un borrador.")
+    a = analisis_de(s)
+    propuesta = normalizar_propuesta(propuesta_items, a, s.proyecto)
+    _, r = evaluar(s, propuesta)
+    s.plan_propuesto = propuesta
+    s.ajuste_calculado, s.ajuste_final = r.ev.ajuste_calculado, r.ev.ajuste
+    s.topado, s.requiere_aprobacion, s.nuevo_credito = r.ev.topado, r.ev.requiere_aprobacion, r.nuevo_cred
+    s.save()
+    return s
+
+
 def enviar(s: Solicitud) -> Solicitud:
-    """Genera (o regenera) el link del comprador. Vence a los 7 días."""
-    if not (s.estado == "borrador" or vencido_el_link(s)):
-        raise ErrorNegocio(409, "Solo se puede generar el link de un borrador o de un link vencido.")
+    """Envía la propuesta: a gerencia si requiere aprobación, al comprador si no."""
+    if s.estado != "borrador":
+        raise ErrorNegocio(409, "Solo se puede enviar un borrador.")
     if not s.comprador_correo:
-        raise ErrorNegocio(422, "Falta el correo del comprador: sin él no se le puede enviar el código de firma.")
+        raise ErrorNegocio(422, "Falta el correo del comprador: sin él no se puede enviar el código de firma.")
+    a, r = evaluar(s, s.plan_propuesto)
+    s.ajuste_calculado, s.ajuste_final = r.ev.ajuste_calculado, r.ev.ajuste
+    s.topado, s.requiere_aprobacion, s.nuevo_credito = r.ev.topado, r.ev.requiere_aprobacion, r.nuevo_cred
+    s.enviada_en = timezone.now()
+    if r.ev.requiere_aprobacion:
+        s.estado = "pendiente_aprobacion"
+    else:
+        s.token_comprador = secrets.token_urlsafe(32)
+        s.estado = "pendiente_firma"
+        s.vence_en = s.enviada_en + timedelta(days=LINK_DIAS)
+        s.otp_hash, s.otp_vence, s.otp_intentos = "", None, 0
+    s.save()
+    return s
+
+
+def enviar_a_comprador(s: Solicitud) -> Solicitud:
+    """Asesor envía el link al comprador después de que gerencia aprobó."""
+    if s.estado != "aprobada":
+        raise ErrorNegocio(409, "Solo se puede enviar al comprador una solicitud aprobada por gerencia.")
+    if not s.comprador_correo:
+        raise ErrorNegocio(422, "Falta el correo del comprador.")
     s.token_comprador = secrets.token_urlsafe(32)
     s.estado = "pendiente_firma"
-    s.enviada_en = timezone.now()
-    s.vence_en = s.enviada_en + timedelta(days=LINK_DIAS)
+    s.vence_en = timezone.now() + timedelta(days=LINK_DIAS)
     s.otp_hash, s.otp_vence, s.otp_intentos = "", None, 0
     s.save()
     return s
 
 
 def reabrir(s: Solicitud) -> Solicitud:
-    """Una propuesta devuelta por gerencia vuelve a borrador para empezar de nuevo."""
-    if s.estado != "rechazada":
-        raise ErrorNegocio(409, "Solo se puede reabrir una solicitud devuelta.")
+    """Vuelve a borrador: devuelta por gerencia, rechazada por comprador, o link vencido."""
+    puede = s.estado in ("rechazada", "rechazada_comprador") or vencido_el_link(s)
+    if not puede:
+        raise ErrorNegocio(409, "Solo se puede reabrir una solicitud devuelta o con link vencido.")
     s.estado = "borrador"
     s.firma_nombre = s.firma_documento = s.firma_hash = s.firma_doc = ""
     s.firma_ip, s.firmada_en = None, None
-    s.aprobada_por, s.aprobada_en = None, None
     s.otp_hash, s.otp_vence, s.otp_intentos = "", None, 0
-    s.plan_propuesto = propuesta_inicial(s)
+    # Conserva el plan para que el asesor vea qué fue rechazado y lo corrija
     a, r = evaluar(s, s.plan_propuesto)
     s.ajuste_calculado, s.ajuste_final = r.ev.ajuste_calculado, r.ev.ajuste
     s.topado, s.requiere_aprobacion, s.nuevo_credito = r.ev.topado, r.ev.requiere_aprobacion, r.nuevo_cred
@@ -242,7 +274,6 @@ def reabrir(s: Solicitud) -> Solicitud:
 
 
 def lineas_carga(s: Solicitud) -> list:
-    """Líneas que el asesor debe cargar en IngeMAX: las cuotas y la línea de ajuste."""
     if not s.firmada_en:
         return []
     out = [
@@ -260,15 +291,14 @@ def lineas_carga(s: Solicitud) -> list:
 
 
 def marcar_cargada(s: Solicitud) -> Solicitud:
-    if s.estado not in ("firmada", "aprobada"):
-        raise ErrorNegocio(409, "La solicitud todavía no está lista para cargar en IngeMAX.")
+    if s.estado != "firmada":
+        raise ErrorNegocio(409, "La solicitud todavía no está lista para cargar: el comprador aún no la ha firmado.")
     s.estado, s.cargada_en = "cargada", timezone.now()
     s.save()
     return s
 
 
 def verificar(s: Solicitud, negocio_imx: dict) -> dict:
-    """Compara lo que hay hoy en IngeMAX con lo que firmó el comprador."""
     if s.estado != "cargada":
         raise ErrorNegocio(409, "Solo se verifica una solicitud ya cargada en IngeMAX.")
     en_imx = [
@@ -343,30 +373,24 @@ def exigir_firmable(s: Solicitud):
     if vencido_el_link(s):
         raise ErrorNegocio(410, "Este link venció. Pídele a tu asesor uno nuevo.")
     if s.estado != "pendiente_firma":
-        raise ErrorNegocio(409, "Esta propuesta ya fue firmada.")
+        raise ErrorNegocio(409, "Esta propuesta ya no está disponible para firmar.")
 
 
 def _hash_otp(s: Solicitud, codigo: str) -> str:
     return hashlib.sha256(f"{settings.SECRET_KEY}:{s.id}:{codigo}".encode()).hexdigest()
 
 
-def generar_codigo(s: Solicitud, propuesta_items) -> dict:
-    """Valida la propuesta, guarda el borrador y envía el código de un solo uso al correo."""
+def generar_codigo(s: Solicitud) -> dict:
+    """Genera y envía el OTP para firmar el plan ya guardado por el asesor."""
     exigir_firmable(s)
-    a = analisis_de(s)
-    propuesta = normalizar_propuesta(propuesta_items, a, s.proyecto)
-    _, r = evaluar(s, propuesta)
-    if not r.valido:
-        raise ErrorNegocio(422, "La propuesta tiene errores.", r.errores)
     if not s.comprador_correo:
         raise ErrorNegocio(422, "No hay un correo registrado para enviarte el código. Habla con tu asesor.")
 
     codigo = f"{secrets.randbelow(10 ** 6):06d}"
-    s.plan_propuesto = propuesta
     s.otp_hash = _hash_otp(s, codigo)
     s.otp_vence = timezone.now() + timedelta(minutes=OTP_MINUTOS)
     s.otp_intentos = 0
-    s.save(update_fields=["plan_propuesto", "otp_hash", "otp_vence", "otp_intentos"])
+    s.save(update_fields=["otp_hash", "otp_vence", "otp_intentos"])
 
     send_mail(
         subject="Tu código para firmar la propuesta de plan de pagos",
@@ -381,14 +405,13 @@ def generar_codigo(s: Solicitud, propuesta_items) -> dict:
     return {"enviado_a": enmascarar_correo(s.comprador_correo), "codigo_prueba": codigo if settings.OTP_MOSTRAR else None}
 
 
-def firmar(solicitud_id, propuesta_items, codigo: str, acepta: bool, ip: str) -> Solicitud:
+def firmar(solicitud_id, codigo: str, acepta: bool, ip: str) -> Solicitud:
     if not acepta:
         raise ErrorNegocio(422, "Debes aceptar la firma electrónica y el tratamiento de tus datos.")
-    error_codigo = None   # se lanza al salir de la transacción: si no, el conteo de intentos se revertiría
+    error_codigo = None
     with transaction.atomic():
         s = Solicitud.objects.select_for_update().select_related("proyecto").get(pk=solicitud_id)
         exigir_firmable(s)
-
         if not s.otp_hash or not s.otp_vence:
             raise ErrorNegocio(422, "Primero pide el código de verificación.")
         if timezone.now() >= s.otp_vence:
@@ -400,19 +423,19 @@ def firmar(solicitud_id, propuesta_items, codigo: str, acepta: bool, ip: str) ->
             s.save(update_fields=["otp_intentos"])
             error_codigo = ErrorNegocio(422, "El código no coincide. Revísalo e inténtalo de nuevo.")
         else:
-            s = _registrar_firma(s, propuesta_items, ip)
+            s = _registrar_firma(s, ip)
     if error_codigo:
         raise error_codigo
     return s
 
 
-def _registrar_firma(s: Solicitud, propuesta_items, ip: str) -> Solicitud:
-    """Recalcula, valida y guarda la firma. Se llama dentro de la transacción de `firmar`."""
+def _registrar_firma(s: Solicitud, ip: str) -> Solicitud:
+    """Firma el plan guardado por el asesor. El comprador no puede modificarlo."""
     a = analisis_de(s)
-    propuesta = normalizar_propuesta(propuesta_items, a, s.proyecto)
+    propuesta = s.plan_propuesto
     _, r = evaluar(s, propuesta)
     if not r.valido:
-        raise ErrorNegocio(422, "La propuesta tiene errores.", r.errores)
+        raise ErrorNegocio(422, "El plan tiene errores.", r.errores)
 
     ahora = timezone.now()
     doc = json.dumps({
@@ -429,7 +452,21 @@ def _registrar_firma(s: Solicitud, propuesta_items, ip: str) -> Solicitud:
     s.firma_nombre, s.firma_documento, s.firma_ip = s.comprador_nombre, s.comprador_documento, ip or None
     s.firma_doc, s.firma_hash = doc, hashlib.sha256(doc.encode()).hexdigest()
     s.firmada_en = ahora
-    s.estado = "pendiente_aprobacion" if r.ev.requiere_aprobacion else "firmada"
+    s.estado = "firmada"
+    s.otp_hash, s.otp_vence, s.otp_intentos = "", None, 0
+    s.save()
+    return s
+
+
+def rechazar_comprador(token: str, observacion: str) -> Solicitud:
+    """Comprador rechaza la propuesta con una observación; vuelve al asesor."""
+    s = solicitud_para_comprador(token)
+    exigir_firmable(s)
+    observacion = (observacion or "").strip()
+    if len(observacion) < 10:
+        raise ErrorNegocio(422, "Escribe al menos 10 caracteres para explicarle al asesor por qué rechazas la propuesta.")
+    s.estado = "rechazada_comprador"
+    s.rechazo_observacion = observacion
     s.otp_hash, s.otp_vence, s.otp_intentos = "", None, 0
     s.save()
     return s
