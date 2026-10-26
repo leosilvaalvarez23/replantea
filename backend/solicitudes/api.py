@@ -247,6 +247,13 @@ def actualizar_plan(request, solicitud_id: str, datos: PropuestaIn):
     return _detalle(sv.actualizar_plan(s, [c.dict() for c in datos.propuesta]))
 
 
+@router.delete("/{solicitud_id}")
+def eliminar(request, solicitud_id: str):
+    s = _obtener(request, solicitud_id)
+    sv.eliminar(s)
+    return {"ok": True}
+
+
 @router.post("/{solicitud_id}/enviar")
 def enviar(request, solicitud_id: str):
     return _detalle(sv.enviar(_obtener(request, solicitud_id)))

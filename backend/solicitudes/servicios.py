@@ -290,6 +290,12 @@ def lineas_carga(s: Solicitud) -> list:
     return out
 
 
+def eliminar(s: Solicitud) -> None:
+    if s.estado != "borrador":
+        raise ErrorNegocio(409, "Solo se puede eliminar un borrador.")
+    s.delete()
+
+
 def marcar_cargada(s: Solicitud) -> Solicitud:
     if s.estado != "firmada":
         raise ErrorNegocio(409, "La solicitud todavía no está lista para cargar: el comprador aún no la ha firmado.")

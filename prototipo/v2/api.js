@@ -31,6 +31,7 @@ const API = (() => {
     get: u => pedir('GET', u),
     post: (u, b) => pedir('POST', u, b === undefined ? {} : b),
     patch: (u, b) => pedir('PATCH', u, b),
+    delete: u => pedir('DELETE', u),
   };
 })();
 

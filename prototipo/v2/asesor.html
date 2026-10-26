@@ -406,7 +406,8 @@ function pintarDetalle(d) {
         <button class="btn sec" data-act="guardar-plan" type="button" ${UI.ocupado ? 'disabled' : ''}>Guardar borrador</button>
         <button class="btn" data-act="guardar-enviar" type="button" ${UI.ocupado ? 'disabled' : ''}>Guardar y enviar</button>
       </div>
-      <p style="margin:10px 0 0;font-size:13px;color:#52646C">Si el ajuste supera el umbral del proyecto (${fmt(d.umbral)}), gerencia deberá aprobarlo antes de que el comprador lo firme.</p>`;
+      <p style="margin:10px 0 0;font-size:13px;color:#52646C">Si el ajuste supera el umbral del proyecto (${fmt(d.umbral)}), gerencia deberá aprobarlo antes de que el comprador lo firme.</p>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--linea)"><button class="txt-btn" data-act="eliminar" type="button" style="color:var(--sobre)">Eliminar solicitud</button></div>`;
 
   } else {
     /* ── tabla de solo lectura ── */
@@ -515,6 +516,13 @@ document.addEventListener('click', async e => {
       break; }
     case 'guardar-plan': guardarPlan(); break;
     case 'guardar-enviar': guardarYEnviar(); break;
+    case 'eliminar': {
+      if (!confirm(`¿Eliminar la solicitud de ${esc(d.comprador.nombre)} (${esc(d.inmueble || 'Venta ' + d.id_venta)})?\nEsta acción no se puede deshacer.`)) break;
+      if (UI.ocupado) break; UI.ocupado = true;
+      try { await API.delete(`/solicitudes/${d.id}`); toast('Solicitud eliminada.'); location.hash = '#/'; }
+      catch (x) { if (x.status === 401) return mostrarError(x); toast(x.message); }
+      finally { UI.ocupado = false; }
+      break; }
     case 'add-fila': {
       const pl = UI.PL.items;
       const ult = pl[pl.length - 1];
