@@ -189,6 +189,7 @@ def buscar_negocios(request, proyecto_id: int, q: str = ""):
             "documento": sv._texto(n, "cliente_identificacion", "documento"),
             "correo": sv._texto(n, "correo", "email", "cliente_correo"),
             "valor_venta": n.get("valor_venta") or 0, "abierta": id_venta in abiertas,
+            "estado_negocio": sv._texto(n, "estado_negocio"),
         }
         if not q or q in " ".join(str(v) for v in fila.values()).lower():
             out.append(fila)

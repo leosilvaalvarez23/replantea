@@ -139,6 +139,8 @@ main{max-width:1180px;margin:0 auto;padding:28px 24px 64px;display:grid;gap:20px
 .res-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
 .res-list button{width:100%;text-align:left;background:var(--papel);border:1.5px solid var(--linea);border-radius:var(--radio-m);padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}
 .res-list button:hover:not(:disabled){border-color:var(--pizarra);background:#F4F8F9}
+.res-list button.cerrado{background:#F2F4F5;color:#9AACB3;cursor:not-allowed}
+.res-list button.cerrado b,.res-list button.cerrado .sub{color:#9AACB3}
 /* modal */
 .overlay{position:fixed;inset:0;background:rgba(23,38,46,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
 .overlay[hidden]{display:none}
@@ -257,9 +259,9 @@ async function vistaNueva() {
 function pintarNueva() {
   const N = UI.nueva;
   const lista = N.estado === 'cargando' ? '<p class="sub">Consultando IngeMAX…</p>' : N.error ? `<div class="aviso err" role="alert"><p>${esc(N.error)}</p></div>`
-    : N.res.length ? `<ul class="res-list">${N.res.map(n => `<li><button type="button" data-sel="${n.id_venta}" ${n.abierta ? 'disabled title="Ya tiene una solicitud abierta"' : ''}>
+    : N.res.length ? `<ul class="res-list">${N.res.map(n => { const cerrado = ['Escriturado','Entregado'].includes(n.estado_negocio); return `<li><button type="button" data-sel="${n.id_venta}" ${cerrado ? 'disabled class="cerrado" title="Este negocio ya está cerrado"' : n.abierta ? 'disabled title="Ya tiene una solicitud abierta"' : ''}>
         <span><b>${esc(n.inmueble || 'Venta ' + n.id_venta)}</b> · ${esc(n.comprador)}<span class="sub">Documento ${esc(n.documento)}</span></span>
-        <span class="sub">${n.abierta ? 'Ya tiene solicitud abierta' : 'Venta ' + fmtM(n.valor_venta)}</span></button></li>`).join('')}</ul>`
+        <span class="sub">${cerrado ? esc(n.estado_negocio) : n.abierta ? 'Ya tiene solicitud abierta' : 'Venta ' + fmtM(n.valor_venta)}</span></button></li>`; }).join('')}</ul>`
     : '<p class="sub">No encontramos negocios con esa búsqueda.</p>';
   $('#app').innerHTML = `
   <p class="migas"><a href="#/">← Solicitudes</a></p>
