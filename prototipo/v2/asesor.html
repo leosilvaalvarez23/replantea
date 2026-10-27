@@ -392,7 +392,7 @@ const PASOS = [
 
 async function vistaDetalle(id) {
   const d = await API.get('/solicitudes/' + id);
-  if (d.estado_ui === 'borrador') UI.PL.items = JSON.parse(JSON.stringify(d.propuesta));
+  if (d.estado_ui === 'borrador') { UI.PL.items = JSON.parse(JSON.stringify(d.propuesta)); evalPlan(); }
   pintarDetalle(d);
 }
 
