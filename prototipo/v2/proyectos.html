@@ -186,7 +186,7 @@ function vistaEditar(id){
   <div class="cols"><form class="pila" id="form" novalidate onsubmit="return false">
     <section class="card"><fieldset><legend>Método de cálculo</legend>
       <div class="seg" role="group" aria-label="Método de cálculo">
-        <button type="button" data-metodo="liquidacion" aria-pressed="${liq}"><b>Liquidación de saldo</b><small>Interés simple sobre el saldo, como el Excel de VyP</small></button>
+        <button type="button" data-metodo="liquidacion" aria-pressed="${liq}"><b>Liquidación de saldo</b><small>Interés simple sobre el saldo</small></button>
         <button type="button" data-metodo="vpn" aria-pressed="${!liq}"><b>Valor presente neto</b><small>Una tasa mensual compuesta</small></button></div>
       <div id="bloque-tasas" class="grid2">${liq?campoPct('tasa_cia','Tasa por adelantar pagos','Mensual, interés simple. Genera el descuento.',d,e)+campoPct('tasa_cliente','Tasa por aplazar pagos','Mensual, interés simple. Genera el cargo.',d,e):campoPct('tasa_vpn','Tasa mensual','Compuesta. La diferencia se expresa a la fecha del último pago.',d,e)}</div>
     </fieldset></section>
